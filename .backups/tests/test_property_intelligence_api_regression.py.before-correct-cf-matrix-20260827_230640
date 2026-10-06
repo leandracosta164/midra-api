@@ -1,0 +1,470 @@
+﻿import pytest
+from fastapi.testclient import TestClient
+from app.main import app
+
+client = TestClient(app)
+
+
+@pytest.mark.parametrize(
+    "address,expected_municipality,expected_district,expected_status,expected_count",
+    [
+        (
+            "922 State Highway 33, Freehold, NJ 07728",
+            "HOWELL TWP",
+            "HD-4",
+            "PARTIALLY_APPLICABLE",
+            7,
+        ),
+        (
+            "1979 Township Drive, Marlboro, NJ 07746",
+            "MARLBORO TWP",
+            "CF",
+            "VERIFY",
+            5,
+        ),
+    ],
+)
+def test_property_intelligence_regression(
+    address,
+    expected_municipality,
+    expected_district,
+    expected_status,
+    expected_count,
+):
+    response = client.post(
+        "/property-intelligence/analyze",
+        json={
+            "address": address,
+            "project_goal": "pool",
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["zoning_evidence"]["municipality"] == expected_municipality
+    assert data["zoning_evidence"]["zoning_district"] == expected_district
+    assert data["zoning_evidence"]["status"] == "ZONING_RESOLVED"
+    assert data["zoning_evidence"]["evidence_type"] == "OFFICIAL_PARCEL_SPECIFIC"
+    assert data["zoning_evidence"]["authoritative"] is True
+
+    applicability = data["zoning_intelligence"]["project_rule_applicability"]
+
+    assert applicability["status"] == expected_status
+    assert applicability["evaluated_requirement_count"] == expected_count
+
+def test_marlboro_cf_pool_rule_is_explicitly_registered():
+    from app.services.zoning_intelligence import _get_registered_rule_set
+
+    rule_set = _get_registered_rule_set(
+        "Marlboro Township",
+        "CF",
+        "pool",
+    )
+
+    assert rule_set["registered"] is True
+    assert rule_set["district_registered"] is True
+    assert rule_set["project_handler"] is not None
+    assert rule_set["project_handler"].__name__ == "_build_marlboro_pool_requirements"
+    assert rule_set["rule_key"] == "marlboro township:CF:pool"
+
+def test_marlboro_cf_municipal_facility_classification():
+    response = client.post(
+        "/property-intelligence/analyze",
+        json={
+            "address": "1979 Township Drive, Marlboro, NJ 07746",
+            "project_goal": "pool",
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    parcel = data["property_resolution"]["parcel"]
+
+    assert parcel["property_class"] == "15C"
+    assert parcel["building_description"] == "MUNICIPAL BLDG"
+
+    applicability = data["zoning_intelligence"]["project_rule_applicability"]
+
+    assert applicability["status"] == "VERIFY"
+    assert applicability["evaluated_requirement_count"] == 5
+
+    residential_requirement = next(
+        item
+        for item in applicability["requirements"]
+        if item["requirement"] == "Residential building prerequisite"
+    )
+
+    assert residential_requirement["status"] == "NOT_APPLICABLE"
+    assert residential_requirement["applicable"] is False
+
+def test_registry_not_applicable_decision_is_respected():
+    from app.services.rule_applicability import (
+        evaluate_requirement_applicability,
+    )
+
+    result = evaluate_requirement_applicability(
+        municipality="Example Township",
+        zoning_district="R-1",
+        project_goal="pool",
+        requirement={
+            "requirement": "Example exclusion",
+            "registry_applicability": "NOT_APPLICABLE",
+        },
+    )
+
+    assert result["status"] == "NOT_APPLICABLE"
+    assert result["applicable"] is False
+
+
+def test_registry_applicable_decision_is_respected():
+    from app.services.rule_applicability import (
+        evaluate_requirement_applicability,
+    )
+
+    result = evaluate_requirement_applicability(
+        municipality="Example Township",
+        zoning_district="R-1",
+        project_goal="pool",
+        requirement={
+            "requirement": "Example requirement",
+            "registry_applicability": "APPLICABLE",
+        },
+    )
+
+    assert result["status"] == "APPLICABLE"
+    assert result["applicable"] is True
+
+
+def test_municipal_facility_override_beats_registry_applicable():
+    from app.services.rule_applicability import (
+        evaluate_requirement_applicability,
+    )
+
+    result = evaluate_requirement_applicability(
+        municipality="Marlboro Township",
+        zoning_district="CF",
+        project_goal="pool",
+        property_resolution={
+            "parcel": {
+                "property_class": "15C",
+                "building_description": "MUNICIPAL BLDG",
+            }
+        },
+        requirement={
+            "requirement": "Residential building prerequisite",
+            "applies_to": "Private permanent residential pool",
+            "registry_applicability": "APPLICABLE",
+        },
+    )
+
+    assert result["status"] == "NOT_APPLICABLE"
+    assert result["applicable"] is False
+
+def test_unresolved_district_does_not_receive_marlboro_pool_rules():
+    from app.services.zoning_intelligence import _get_registered_rule_set
+
+    rule_set = _get_registered_rule_set(
+        "Marlboro Township",
+        "VERIFY",
+        "pool",
+    )
+
+    assert rule_set["registered"] is True
+    assert rule_set["district_registered"] is False
+    assert rule_set["project_handler"] is None
+    assert rule_set["rule_key"] is None
+
+def test_marlboro_cf_coverage_reports_project_rules_available():
+    response = client.post(
+        "/property-intelligence/analyze",
+        json={
+            "address": "1979 Township Drive, Marlboro, NJ 07746",
+            "project_goal": "pool",
+        },
+    )
+
+    assert response.status_code == 200
+
+    coverage = response.json()["zoning_intelligence"]["coverage"]
+
+    assert coverage["status"] == "PROJECT_RULES_AVAILABLE"
+    assert coverage["municipality_registered"] is True
+    assert coverage["zoning_resolution_supported"] is True
+    assert coverage["district_rules_supported"] is False
+    assert coverage["project_rules_supported"] is True
+    assert coverage["zoning_district"] == "CF"
+
+
+def test_unresolved_marlboro_district_cannot_claim_project_coverage():
+    from app.services.municipality_coverage import build_municipality_coverage
+
+    result = build_municipality_coverage(
+        municipality="Marlboro Township",
+        zoning_intelligence={
+            "municipality": "MARLBORO TWP",
+            "zoning_district": "VERIFY",
+            "bulk_requirements": [],
+            "project_requirements": [],
+        },
+        zoning_resolution={
+            "zoning_district": "VERIFY",
+            "confidence": "VERIFY",
+        },
+        project_goal="pool",
+    )
+
+    assert result["status"] == "REGISTERED"
+    assert result["municipality_registered"] is True
+    assert result["zoning_resolution_supported"] is False
+    assert result["district_rules_supported"] is False
+    assert result["project_rules_supported"] is False
+    assert result["zoning_district"] == "VERIFY"
+
+
+def test_unregistered_municipality_cannot_claim_any_coverage():
+    from app.services.municipality_coverage import build_municipality_coverage
+
+    result = build_municipality_coverage(
+        municipality="Example Township",
+        zoning_intelligence={
+            "municipality": "Example Township",
+            "zoning_district": "R-1",
+            "bulk_requirements": [{"requirement": "Example"}],
+            "project_requirements": [{"requirement": "Example"}],
+        },
+        zoning_resolution={
+            "zoning_district": "R-1",
+            "confidence": "OFFICIAL_PARCEL_SPECIFIC",
+        },
+        project_goal="pool",
+    )
+
+    assert result["status"] == "UNREGISTERED"
+    assert result["municipality_registered"] is False
+    assert result["zoning_resolution_supported"] is False
+    assert result["district_rules_supported"] is False
+    assert result["project_rules_supported"] is False
+
+
+def test_api_exposes_registry_and_coverage_contract_for_howell_hd4():
+    response = client.post(
+        "/property-intelligence/analyze",
+        json={
+            "address": "922 State Highway 33, Freehold, NJ 07728",
+            "project_goal": "pool",
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+    zoning = data["zoning_intelligence"]
+    registry = zoning["rules_registry"]
+    coverage = zoning["coverage"]
+
+    assert registry["registered"] is True
+    assert registry["district_registered"] is True
+    assert registry["rule_key"] == "howell township:HD-4:pool"
+    assert registry["project_rules_available"] is True
+
+    assert coverage["status"] == "PROJECT_RULES_AVAILABLE"
+    assert coverage["municipality_registered"] is True
+    assert coverage["zoning_resolution_supported"] is True
+    assert coverage["project_rules_supported"] is True
+    assert coverage["zoning_district"] == "HD-4"
+
+    assert zoning["project_rule_applicability"]["status"] == (
+        "PARTIALLY_APPLICABLE"
+    )
+    assert zoning["project_rule_applicability"][
+        "evaluated_requirement_count"
+    ] == 7
+
+
+def test_api_exposes_registry_and_coverage_contract_for_marlboro_cf():
+    response = client.post(
+        "/property-intelligence/analyze",
+        json={
+            "address": "1979 Township Drive, Marlboro, NJ 07746",
+            "project_goal": "pool",
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+    zoning = data["zoning_intelligence"]
+    registry = zoning["rules_registry"]
+    coverage = zoning["coverage"]
+
+    assert registry["registered"] is True
+    assert registry["district_registered"] is True
+    assert registry["rule_key"] == "marlboro township:CF:pool"
+    assert registry["project_rules_available"] is True
+
+    assert coverage["status"] == "PROJECT_RULES_AVAILABLE"
+    assert coverage["municipality_registered"] is True
+    assert coverage["zoning_resolution_supported"] is True
+    assert coverage["project_rules_supported"] is True
+    assert coverage["zoning_district"] == "CF"
+
+    assert zoning["project_rule_applicability"]["status"] == "VERIFY"
+    assert zoning["project_rule_applicability"][
+        "evaluated_requirement_count"
+    ] == 5
+
+def test_registry_supported_and_unsupported_matrix():
+    from app.services.zoning_intelligence import _get_registered_rule_set
+
+    cases = [
+        (
+            "Howell Township",
+            "HD-4",
+            "pool",
+            True,
+            True,
+            True,
+            "howell township:HD-4:pool",
+        ),
+        (
+            "Marlboro Township",
+            "CF",
+            "pool",
+            True,
+            False,
+            True,
+            "marlboro township:CF:pool",
+        ),
+        (
+            "Marlboro Township",
+            "R-20",
+            "pool",
+            True,
+            True,
+            True,
+            "marlboro township:R-20:pool",
+        ),
+        (
+            "Marlboro Township",
+            "VERIFY",
+            "pool",
+            True,
+            False,
+            False,
+            None,
+        ),
+        (
+            "Example Township",
+            "R-1",
+            "pool",
+            False,
+            False,
+            False,
+            None,
+        ),
+    ]
+
+    for (
+        municipality,
+        district,
+        project,
+        expected_registered,
+        expected_district_registered,
+        expected_project_handler,
+        expected_rule_key,
+    ) in cases:
+        result = _get_registered_rule_set(
+            municipality,
+            district,
+            project,
+        )
+
+        assert result["registered"] is expected_registered
+        assert (
+            result["district_registered"]
+            is expected_district_registered
+        )
+        assert (
+            result["project_handler"] is not None
+        ) is expected_project_handler
+        assert result["rule_key"] == expected_rule_key
+
+def test_registry_supported_and_unsupported_matrix():
+    from app.services.zoning_intelligence import _get_registered_rule_set
+
+    cases = [
+        (
+            "Howell Township",
+            "HD-4",
+            "pool",
+            True,
+            True,
+            True,
+            "howell township:HD-4:pool",
+        ),
+        (
+            "Marlboro Township",
+            "CF",
+            "pool",
+            True,
+            False,
+            True,
+            "marlboro township:CF:pool",
+        ),
+        (
+            "Marlboro Township",
+            "R-20",
+            "pool",
+            True,
+            True,
+            True,
+            "marlboro township:R-20:pool",
+        ),
+        (
+            "Marlboro Township",
+            "VERIFY",
+            "pool",
+            True,
+            False,
+            False,
+            None,
+        ),
+        (
+            "Example Township",
+            "R-1",
+            "pool",
+            False,
+            False,
+            False,
+            None,
+        ),
+    ]
+
+    for (
+        municipality,
+        district,
+        project,
+        expected_registered,
+        expected_district_registered,
+        expected_project_handler,
+        expected_rule_key,
+    ) in cases:
+        result = _get_registered_rule_set(
+            municipality,
+            district,
+            project,
+        )
+
+        assert result["registered"] is expected_registered
+        assert (
+            result["district_registered"]
+            is expected_district_registered
+        )
+        assert (
+            result["project_handler"] is not None
+        ) is expected_project_handler
+        assert result["rule_key"] == expected_rule_key

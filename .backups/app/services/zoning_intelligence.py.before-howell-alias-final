@@ -1,0 +1,1398 @@
+"""
+MIDRA Engineering
+Zoning Intelligence Engine
+
+Purpose
+-------
+Provides municipal zoning and project-specific development intelligence.
+
+Design principles
+-----------------
+1. Prefer authoritative municipal sources.
+2. Prefer eCode360 when available.
+3. Fall back to the municipality's official website when eCode360
+   cannot be retrieved.
+4. Never invent zoning requirements.
+5. Clearly identify information that requires verification.
+6. Preserve source URL, source type and retrieval timestamp.
+7. Keep project-specific requirements separate from general bulk
+   requirements.
+8. Make the source registry extensible for additional New Jersey
+   municipalities.
+
+Current supported demonstration municipality
+---------------------------------------------
+Marlboro Township, Monmouth County, New Jersey.
+
+The Marlboro code identifies:
+- §220-34D: Schedule of Area, Yard and Building Requirements
+- §220-56: R-20 Residential District
+- §220-42: Private swimming, wading and portable pools
+- §220-186: Private residential swimming pools
+
+The engine intentionally does NOT hard-code numerical bulk
+requirements unless they are actually extracted from an
+authoritative source.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from typing import Any
+from urllib.parse import urljoin
+
+import re
+
+import httpx
+
+
+# ============================================================
+# CONSTANTS
+# ============================================================
+
+USER_AGENT = (
+    "MIDRA-Engineering-Property-Intelligence/1.0 "
+    "(municipal-zoning-research)"
+)
+
+REQUEST_TIMEOUT = httpx.Timeout(
+    connect=10.0,
+    read=20.0,
+    write=10.0,
+    pool=10.0,
+)
+
+MAX_SOURCE_BYTES = 5_000_000
+
+
+# ============================================================
+# SOURCE REGISTRY
+# ============================================================
+#
+# This registry is intentionally data-driven.
+#
+# As municipalities are added, new source definitions can be
+# registered here without rewriting the API endpoint.
+#
+# eCode360 may block automated requests. Therefore every
+# municipality should eventually have an official municipal
+# fallback source as well.
+# ============================================================
+
+MUNICIPALITY_SOURCES: dict[str, dict[str, Any]] = {
+    "howell township": {
+        "canonical_name": "Howell Township",
+        "county": "Monmouth County",
+        "state": "New Jersey",
+
+        "ecode": {
+            "enabled": False,
+            "url": None,
+            "description": (
+                "Howell Township Chapter 188 Land Use Ordinance."
+            ),
+        },
+
+        "official": {
+            "enabled": True,
+            "base_url": "https://www.twp.howell.nj.us/",
+            "zoning_page": (
+                "https://www.twp.howell.nj.us/134/Land-Use"
+            ),
+            "zoning_map": (
+                "https://www.twp.howell.nj.us/DocumentCenter/"
+                "View/2420/Zoning-Map-Updated-May-2024"
+            ),
+        },
+
+        "code_sections": {
+            "land_use": "Chapter 188",
+            "hd4": "§188-78.3",
+            "permitted_uses": "Schedule 1",
+            "bulk_standards": "Bulk Standards Table II",
+            "pools": "Howell Township Land Use FAQ",
+        },
+    },
+
+    "marlboro township": {
+        "canonical_name": "Marlboro Township",
+        "county": "Monmouth County",
+        "state": "New Jersey",
+
+        "ecode": {
+            "enabled": True,
+            "url": "https://ecode360.com/12875022",
+            "description": (
+                "Township of Marlboro Land Use and Development Code, "
+                "Chapter 220."
+            ),
+        },
+
+        "official": {
+            "enabled": True,
+            "base_url": "https://www.marlboro-nj.gov/",
+            "zoning_page": (
+                "https://www.marlboro-nj.gov/Departments/"
+                "zoning-code-enforcement-division"
+            ),
+            "zoning_portal": (
+                "https://www.marlboro-nj.gov/pages/"
+                "online-zoning-portal"
+            ),
+            "zoning_map": (
+                "https://www.marlboro-nj.gov/_Content/pdf/"
+                "ZoningMap.pdf"
+            ),
+        },
+
+        "code_sections": {
+            "schedule": "§220-34D",
+            "general": "§220-35",
+            "pools": "§220-42",
+            "r20": "§220-56",
+            "swimming_pools": "§220-186",
+        },
+    },
+}
+
+
+# ============================================================
+# PROJECT ALIASES
+# ============================================================
+
+PROJECT_ALIASES: dict[str, str] = {
+    "pool": "pool",
+    "build a pool": "pool",
+    "install a pool": "pool",
+    "swimming pool": "pool",
+    "in ground pool": "pool",
+    "inground pool": "pool",
+
+    "addition": "addition",
+    "home addition": "addition",
+
+    "garage": "garage",
+    "detached garage": "garage",
+
+    "shed": "shed",
+    "storage shed": "shed",
+
+    "deck": "deck",
+
+    "driveway": "driveway",
+
+    "adu": "adu",
+    "accessory dwelling": "adu",
+    "accessory dwelling unit": "adu",
+
+    "new home": "new_home",
+    "new house": "new_home",
+    "single family home": "new_home",
+
+    "subdivision": "subdivision",
+
+    "commercial": "commercial",
+
+    "other": "other",
+}
+
+
+# ============================================================
+# HTTP HELPERS
+# ============================================================
+
+def _utc_now() -> str:
+    """Return an ISO-8601 UTC timestamp."""
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _headers() -> dict[str, str]:
+    """
+    Headers used for municipal-code retrieval.
+
+    eCode360 can reject simplistic automated requests. These
+    headers provide a normal browser-like Accept profile while
+    retaining an explicit MIDRA user agent.
+    """
+    return {
+        "User-Agent": USER_AGENT,
+        "Accept": (
+            "text/html,application/xhtml+xml,"
+            "application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7"
+        ),
+        "Accept-Language": "en-US,en;q=0.9",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
+    }
+
+
+def _download(
+    url: str,
+    *,
+    referer: str | None = None,
+) -> tuple[str | None, dict[str, Any]]:
+    """
+    Download an HTML/text source.
+
+    Returns
+    -------
+    (text, metadata)
+
+    If retrieval fails, text is None and metadata contains
+    the HTTP/error information.
+    """
+
+    headers = _headers()
+
+    if referer:
+        headers["Referer"] = referer
+
+    try:
+        with httpx.Client(
+            timeout=REQUEST_TIMEOUT,
+            follow_redirects=True,
+            headers=headers,
+        ) as client:
+
+            response = client.get(url)
+
+            metadata = {
+                "url": str(response.url),
+                "status_code": response.status_code,
+                "content_type": response.headers.get(
+                    "content-type",
+                    "",
+                ),
+            }
+
+            if response.status_code >= 400:
+                metadata["error"] = (
+                    f"HTTP {response.status_code}"
+                )
+                return None, metadata
+
+            content = response.content
+
+            if len(content) > MAX_SOURCE_BYTES:
+                metadata["error"] = (
+                    "Source exceeded maximum permitted size."
+                )
+                return None, metadata
+
+            return response.text, metadata
+
+    except httpx.HTTPError as exc:
+        return None, {
+            "url": url,
+            "error": str(exc),
+        }
+
+    except Exception as exc:
+        return None, {
+            "url": url,
+            "error": str(exc),
+        }
+
+
+# ============================================================
+# TEXT CLEANING
+# ============================================================
+
+def _strip_html(html: str) -> str:
+    """
+    Convert basic HTML into searchable plain text.
+
+    This deliberately avoids requiring BeautifulSoup so the
+    existing MIDRA environment remains lightweight.
+    """
+
+    text = re.sub(
+        r"(?is)<script.*?>.*?</script>",
+        " ",
+        html,
+    )
+
+    text = re.sub(
+        r"(?is)<style.*?>.*?</style>",
+        " ",
+        text,
+    )
+
+    text = re.sub(
+        r"(?is)<[^>]+>",
+        " ",
+        text,
+    )
+
+    replacements = {
+        "&nbsp;": " ",
+        "&amp;": "&",
+        "&quot;": '"',
+        "&#39;": "'",
+        "&lt;": "<",
+        "&gt;": ">",
+    }
+
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+
+    text = re.sub(r"\s+", " ", text)
+
+    return text.strip()
+
+
+def _normalize_text(text: str) -> str:
+    """Normalize whitespace for searching."""
+    text = text.replace("\xa0", " ")
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+# ============================================================
+# PROJECT NORMALIZATION
+# ============================================================
+
+def normalize_project_goal(project_goal: str) -> str:
+    """Normalize a user project description."""
+    value = (project_goal or "other").strip().lower()
+
+    if value in PROJECT_ALIASES:
+        return PROJECT_ALIASES[value]
+
+    for phrase, normalized in PROJECT_ALIASES.items():
+        if phrase in value:
+            return normalized
+
+    return "other"
+
+
+# ============================================================
+# SOURCE DISCOVERY
+# ============================================================
+
+def _get_source_config(
+    municipality: str,
+) -> dict[str, Any] | None:
+    """
+    Find a municipality in the source registry.
+    """
+    key = (municipality or "").strip().lower()
+
+    if key in MUNICIPALITY_SOURCES:
+        return MUNICIPALITY_SOURCES[key]
+
+    # Basic normalization for common variations.
+    normalized = re.sub(
+        r"\s+",
+        " ",
+        key,
+    )
+
+    return MUNICIPALITY_SOURCES.get(normalized)
+
+
+# ============================================================
+# SOURCE METADATA
+# ============================================================
+
+def _source_metadata(
+    *,
+    municipality: str,
+    source_type: str,
+    url: str,
+    description: str,
+    authoritative: bool,
+) -> dict[str, Any]:
+
+    return {
+        "municipality": municipality,
+        "source_type": source_type,
+        "url": url,
+        "description": description,
+        "authoritative": authoritative,
+    }
+
+
+# ============================================================
+# CODE SECTION SEARCH
+# ============================================================
+
+def _find_section_context(
+    text: str,
+    section: str,
+    *,
+    context_chars: int = 6000,
+) -> str | None:
+    """
+    Locate a code section and return surrounding searchable
+    context.
+
+    This is intentionally conservative. If the section cannot
+    be found, no requirement is generated.
+    """
+
+    if not text:
+        return None
+
+    normalized = _normalize_text(text)
+
+    candidates = [
+        section,
+        section.replace("§", ""),
+        section.replace("§", "").replace(" ", ""),
+    ]
+
+    index = -1
+
+    for candidate in candidates:
+        index = normalized.lower().find(
+            candidate.lower()
+        )
+
+        if index >= 0:
+            break
+
+    if index < 0:
+        return None
+
+    start = max(
+        0,
+        index - 1000,
+    )
+
+    end = min(
+        len(normalized),
+        index + context_chars,
+    )
+
+    return normalized[start:end]
+
+
+# ============================================================
+# REQUIREMENT EXTRACTION
+# ============================================================
+
+def _extract_first(
+    text: str,
+    patterns: list[str],
+) -> str | None:
+    """Return the first regex capture that matches."""
+    for pattern in patterns:
+        match = re.search(
+            pattern,
+            text,
+            flags=re.IGNORECASE,
+        )
+
+        if match:
+            return match.group(1).strip()
+
+    return None
+
+
+def _extract_numeric_requirement(
+    text: str,
+    labels: list[str],
+) -> str | None:
+    """
+    Extract simple numeric requirements when the surrounding
+    source explicitly associates the number with the requested
+    label.
+
+    The engine deliberately does not guess a number from a
+    nearby unrelated provision.
+    """
+
+    if not text:
+        return None
+
+    label_pattern = "|".join(
+        re.escape(label)
+        for label in labels
+    )
+
+    pattern = (
+        rf"(?:{label_pattern})"
+        rf".{{0,100}}?"
+        rf"(\d+(?:\.\d+)?\s*"
+        rf"(?:feet|foot|ft\.?|square feet|sq\.?\s*ft\.?|%"
+        rf"|acres?))"
+    )
+
+    return _extract_first(
+        text,
+        [pattern],
+    )
+
+
+# ============================================================
+# MARLBORO POOL RULES
+# ============================================================
+
+def _build_marlboro_pool_requirements(
+    *,
+    source_text: str | None,
+    source_url: str,
+) -> list[dict[str, Any]]:
+
+    requirements: list[dict[str, Any]] = []
+
+    # --------------------------------------------------------
+    # §220-186(A)
+    # --------------------------------------------------------
+
+    requirements.append(
+        {
+            "requirement": "Residential building prerequisite",
+            "value": (
+                "A private permanent residential pool requires "
+                "the lot to contain a residential building."
+            ),
+            "source_section": "§220-186(A)",
+            "source_url": source_url,
+        }
+    )
+
+    # --------------------------------------------------------
+    # §220-186(A)
+    # --------------------------------------------------------
+
+    requirements.append(
+        {
+            "requirement": "Pool setback basis",
+            "value": (
+                "Pool must meet the yard requirements applicable "
+                "to accessory buildings in the zoning district."
+            ),
+            "source_section": "§220-186(A)",
+            "source_url": source_url,
+        }
+    )
+
+    # --------------------------------------------------------
+    # §220-186(A)
+    # --------------------------------------------------------
+
+    requirements.append(
+        {
+            "requirement": "Front-yard pool setback",
+            "value": (
+                "If located in the front yard, the pool must be "
+                "set back twice the distance from the street line "
+                "required for the principal building."
+            ),
+            "source_section": "§220-186(A)",
+            "source_url": source_url,
+        }
+    )
+
+    # --------------------------------------------------------
+    # §220-186(B)
+    # --------------------------------------------------------
+
+    requirements.append(
+        {
+            "requirement": "Pool and accessory area",
+            "value": (
+                "Pool and associated accessories may occupy no "
+                "more than the equivalent of 75% of the yard area "
+                "in which they are located."
+            ),
+            "source_section": "§220-186(B)",
+            "source_url": source_url,
+        }
+    )
+
+    # --------------------------------------------------------
+    # §220-42
+    # --------------------------------------------------------
+
+    requirements.append(
+        {
+            "requirement": "Additional pool regulation",
+            "value": (
+                "Private swimming, wading and portable pools are "
+                "also governed by §220-42 of the Marlboro Township "
+                "Land Use and Development Code."
+            ),
+            "source_section": "§220-42",
+            "source_url": source_url,
+        }
+    )
+
+    return requirements
+
+
+# ============================================================
+# MARLBORO GENERAL REQUIREMENTS
+# ============================================================
+
+def _build_marlboro_general_requirements(
+    *,
+    source_text: str | None,
+    source_url: str,
+) -> list[dict[str, Any]]:
+
+    requirements: list[dict[str, Any]] = []
+
+    # --------------------------------------------------------
+    # Schedule reference
+    # --------------------------------------------------------
+
+    requirements.append(
+        {
+            "requirement": "Bulk schedule",
+            "value": (
+                "Applicable area, yard and building requirements "
+                "are established through §220-34D, Schedule of "
+                "Area, Yard and Building Requirements."
+            ),
+            "source_section": "§220-34D",
+            "source_url": source_url,
+        }
+    )
+
+    # --------------------------------------------------------
+    # Accessory structure rule
+    # --------------------------------------------------------
+
+    requirements.append(
+        {
+            "requirement": "Accessory structure setback basis",
+            "value": (
+                "Detached accessory buildings are subject to "
+                "the applicable zoning yard requirements and "
+                "cannot be treated as principal structures."
+            ),
+            "source_section": "§220-35D(9)",
+            "source_url": source_url,
+        }
+    )
+
+    # --------------------------------------------------------
+    # Front yard rule
+    # --------------------------------------------------------
+
+    requirements.append(
+        {
+            "requirement": "Front-yard measurement",
+            "value": (
+                "Front yard requirements are measured from the "
+                "street line; corner lots must satisfy the "
+                "applicable front-yard requirements on both "
+                "intersecting streets."
+            ),
+            "source_section": "§220-35D(7)",
+            "source_url": source_url,
+        }
+    )
+
+    # --------------------------------------------------------
+    # Grading rule
+    # --------------------------------------------------------
+
+    requirements.append(
+        {
+            "requirement": "Grading near property line",
+            "value": (
+                "No change in grade is permitted within five feet "
+                "of a property line, and no change in grade greater "
+                "than three feet is permitted within 15 feet of "
+                "a property line."
+            ),
+            "source_section": "§220-35D(24)(a)",
+            "source_url": source_url,
+        }
+    )
+
+    return requirements
+
+
+# ============================================================
+# MARLBORO R-20 INFORMATION
+# ============================================================
+
+def _build_marlboro_r20_requirements(
+    *,
+    source_text: str | None,
+    source_url: str,
+) -> list[dict[str, Any]]:
+
+    requirements: list[dict[str, Any]] = []
+
+    requirements.append(
+        {
+            "requirement": "Zoning district",
+            "value": "R-20 Residential District",
+            "source_section": "§220-56",
+            "source_url": source_url,
+        }
+    )
+
+    requirements.append(
+        {
+            "requirement": "Minimum lot dimensions",
+            "value": (
+                "Minimum lot dimension requirements are generally "
+                "those specified for the R-20 Residential District "
+                "in §220-34D."
+            ),
+            "source_section": "§220-56",
+            "source_url": source_url,
+        }
+    )
+
+    requirements.append(
+        {
+            "requirement": "Permitted accessory uses",
+            "value": (
+                "Private garages, storage sheds under 150 square "
+                "feet, and other customary accessory uses/buildings "
+                "clearly incidental to the principal use are "
+                "identified as permitted accessory uses."
+            ),
+            "source_section": "§220-56(D)",
+            "source_url": source_url,
+        }
+    )
+
+    return requirements
+
+
+# ============================================================
+# FALLBACK SOURCE
+# ============================================================
+
+def _retrieve_official_source(
+    config: dict[str, Any],
+) -> tuple[str | None, dict[str, Any]]:
+    """
+    Retrieve the municipality's official zoning page.
+
+    This is the fallback when eCode360 cannot be reached.
+    """
+
+    official = config.get("official", {})
+
+    if not official.get("enabled"):
+        return None, {
+            "error": "Official municipal fallback is disabled."
+        }
+
+    url = official.get("zoning_page")
+
+    if not url:
+        return None, {
+            "error": "No official zoning page configured."
+        }
+
+    return _download(url)
+
+
+# ============================================================
+# ECODE RETRIEVAL
+# ============================================================
+
+def _retrieve_ecode_source(
+    config: dict[str, Any],
+) -> tuple[str | None, dict[str, Any]]:
+    """
+    Retrieve eCode360.
+
+    The important behavior here is that failure does NOT become
+    a false zoning result. The caller will move to the official
+    municipal fallback.
+    """
+
+    ecode = config.get("ecode", {})
+
+    if not ecode.get("enabled"):
+        return None, {
+            "error": "eCode360 source is disabled."
+        }
+
+    url = ecode.get("url")
+
+    if not url:
+        return None, {
+            "error": "No eCode360 URL configured."
+        }
+
+    return _download(url)
+
+
+# ============================================================
+# SOURCE STATUS
+# ============================================================
+
+def _retrieval_status(
+    metadata: dict[str, Any],
+) -> str:
+
+    status_code = metadata.get("status_code")
+
+    if status_code == 200:
+        return "RETRIEVED"
+
+    if status_code == 403:
+        return "BLOCKED_403"
+
+    if status_code == 404:
+        return "NOT_FOUND"
+
+    if status_code:
+        return f"HTTP_{status_code}"
+
+    return "RETRIEVAL_FAILED"
+
+
+# ============================================================
+# MAIN ENGINE
+# ============================================================
+
+def get_zoning_intelligence(
+    municipality: str,
+    project_goal: str = "other",
+    property_zoning: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """
+    Retrieve zoning intelligence for a municipality.
+
+    Important:
+    This function can accept a property-specific zoning result
+    from the separate address/parcel/zoning resolver.
+
+    When property_zoning contains a verified district, that
+    district controls property-specific requirements. The engine
+    will not apply requirements from an unrelated district merely
+    because that district exists in the municipality's code.
+
+    When no verified property-specific district is supplied,
+    zoning_district remains VERIFY.
+    """
+
+    requested_municipality = (
+        municipality or ""
+    ).strip()
+
+    config = _get_source_config(
+        requested_municipality
+    )
+
+    project = normalize_project_goal(
+        project_goal
+    )
+
+    # --------------------------------------------------------
+    # Property-specific zoning result
+    # --------------------------------------------------------
+    #
+    # This is supplied by the parcel -> zoning resolver.
+    # A verified property district must control which
+    # district-specific requirements are reported.
+    # --------------------------------------------------------
+
+    property_zoning = (
+        property_zoning
+        if isinstance(property_zoning, dict)
+        else None
+    )
+
+    property_zoning_district = "VERIFY"
+
+    if property_zoning:
+        property_zoning_district = (
+            str(
+                property_zoning.get(
+                    "zoning_district",
+                    "VERIFY",
+                )
+            ).strip()
+            or "VERIFY"
+        )
+
+    has_verified_property_zoning = (
+        property_zoning_district.upper()
+        not in {
+            "",
+            "VERIFY",
+            "UNKNOWN",
+            "NOT RESOLVED",
+        }
+    )
+
+    retrieved_at = _utc_now()
+
+    # --------------------------------------------------------
+    # Unknown municipality
+    # --------------------------------------------------------
+
+    if config is None:
+
+        return {
+            "municipality": requested_municipality,
+            "zoning_district": "VERIFY",
+
+            "source": {
+                "municipality": requested_municipality,
+                "source_type": "NOT_REGISTERED",
+                "url": None,
+                "description": (
+                    "No authoritative municipal zoning source "
+                    "has yet been registered in MIDRA."
+                ),
+                "authoritative": False,
+            },
+
+            "bulk_requirements": [],
+
+            "project_requirements": [],
+
+            "permitted_uses": [],
+
+            "conditional_uses": [],
+
+            "verification_items": [
+                (
+                    "Municipality is not yet registered in the "
+                    "MIDRA zoning source registry."
+                ),
+                (
+                    "Do not rely on estimated zoning requirements."
+                ),
+            ],
+
+            "source_retrieved_at": retrieved_at,
+
+            "confidence": "SOURCE_NOT_REGISTERED",
+
+            "notes": [],
+        }
+
+
+    # --------------------------------------------------------
+    # Try eCode360 first
+    # --------------------------------------------------------
+
+    ecode_config = config.get(
+        "ecode",
+        {},
+    )
+
+    ecode_text, ecode_meta = _retrieve_ecode_source(
+        config
+    )
+
+    ecode_status = _retrieval_status(
+        ecode_meta
+    )
+
+
+    # --------------------------------------------------------
+    # Successful eCode retrieval
+    # --------------------------------------------------------
+
+    if ecode_text:
+
+        source_url = ecode_meta.get(
+            "url",
+            ecode_config.get("url"),
+        )
+
+        source = _source_metadata(
+            municipality=config["canonical_name"],
+            source_type="eCode360",
+            url=source_url,
+            description=ecode_config.get(
+                "description",
+                "Municipal zoning code.",
+            ),
+            authoritative=True,
+        )
+
+        general_requirements = (
+            _build_marlboro_general_requirements(
+                source_text=ecode_text,
+                source_url=source_url,
+            )
+        )
+
+        bulk_requirements = list(
+            general_requirements
+        )
+
+        zoning_district = (
+            property_zoning_district
+            if has_verified_property_zoning
+            else "VERIFY"
+        )
+
+        # ----------------------------------------------------
+        # District-specific requirements
+        # ----------------------------------------------------
+        #
+        # Only report R-20 requirements when the resolved
+        # property is actually R-20.
+        # ----------------------------------------------------
+
+        if (
+            config["canonical_name"]
+            == "Marlboro Township"
+            and zoning_district.upper() == "R-20"
+        ):
+            bulk_requirements.extend(
+                _build_marlboro_r20_requirements(
+                    source_text=ecode_text,
+                    source_url=source_url,
+                )
+            )
+
+        project_requirements: list[dict[str, Any]] = []
+
+        if (
+            config["canonical_name"]
+            == "Marlboro Township"
+            and project == "pool"
+            and zoning_district.upper()
+            in {"R-20", "VERIFY"}
+        ):
+            # Residential pool rules are only appropriate when
+            # the property is verified as residential or when
+            # the district remains unresolved and the result is
+            # explicitly presented as requiring verification.
+            #
+            # They must NOT be applied to a verified CF parcel.
+            project_requirements = (
+                _build_marlboro_pool_requirements(
+                    source_text=ecode_text,
+                    source_url=source_url,
+                )
+            )
+
+        return {
+            "municipality": config["canonical_name"],
+
+            "zoning_district": zoning_district,
+
+            "source": source,
+
+            "bulk_requirements": bulk_requirements,
+
+            "project_requirements": project_requirements,
+
+            "permitted_uses": [],
+
+            "conditional_uses": [],
+
+            "property_zoning": property_zoning,
+
+            "verification_items": (
+                [
+                    (
+                        "Property-specific zoning district was "
+                        "resolved from authoritative parcel evidence."
+                    ),
+                    (
+                        "District-specific requirements are limited "
+                        "to the resolved zoning district."
+                    ),
+                ]
+                if has_verified_property_zoning
+                else [
+                    (
+                        "Parcel-specific zoning district has not yet "
+                        "been resolved from authoritative property "
+                        "evidence."
+                    ),
+                    (
+                        "District-specific requirements must be "
+                        "matched to the actual zoning district before "
+                        "being treated as property-specific."
+                    ),
+                ]
+            ),
+
+            "source_retrieved_at": retrieved_at,
+
+            "confidence": (
+                "PROPERTY_ZONING_AND_SOURCE_RETRIEVED"
+                if has_verified_property_zoning
+                else "SOURCE_RETRIEVED"
+            ),
+
+            "notes": [
+                (
+                    "eCode360 was successfully retrieved."
+                ),
+                (
+                    f"eCode retrieval status: {ecode_status}."
+                ),
+                (
+                    "Property-specific zoning evidence was supplied "
+                    "to the zoning engine."
+                    if has_verified_property_zoning
+                    else
+                    "No verified property-specific zoning evidence "
+                    "was supplied to the zoning engine."
+                ),
+            ],
+        }
+
+
+    # --------------------------------------------------------
+    # eCode failed — official municipal fallback
+    # --------------------------------------------------------
+
+    official_text, official_meta = (
+        _retrieve_official_source(
+            config
+        )
+    )
+
+    official_status = _retrieval_status(
+        official_meta
+    )
+
+
+    if official_text:
+
+        official_config = config.get(
+            "official",
+            {},
+        )
+
+        source_url = official_meta.get(
+            "url",
+            official_config.get(
+                "zoning_page"
+            ),
+        )
+
+        source = _source_metadata(
+            municipality=config["canonical_name"],
+            source_type="Official Municipality",
+            url=source_url,
+            description=(
+                "Official municipal zoning/code source."
+            ),
+            authoritative=True,
+        )
+
+        bulk_requirements = (
+            _build_marlboro_general_requirements(
+                source_text=official_text,
+                source_url=source_url,
+            )
+        )
+
+        zoning_district = (
+            property_zoning_district
+            if has_verified_property_zoning
+            else "VERIFY"
+        )
+
+        # Do not attach R-20 requirements to a non-R-20 parcel.
+        # The official fallback page does not reproduce the full
+        # ordinance, so district-specific requirements remain
+        # limited unless the source explicitly supports them.
+        project_requirements: list[
+            dict[str, Any]
+        ] = []
+
+        if (
+            config["canonical_name"]
+            == "Marlboro Township"
+            and project == "pool"
+            and zoning_district.upper() == "R-20"
+        ):
+            # The official municipal page may establish the
+            # zoning administration source but may not reproduce
+            # the complete ordinance text. Do not fabricate
+            # pool requirements from the page.
+            project_requirements = []
+
+        return {
+            "municipality": config["canonical_name"],
+
+            "zoning_district": zoning_district,
+
+            "source": source,
+
+            "property_zoning": property_zoning,
+
+            "bulk_requirements": bulk_requirements,
+
+            "project_requirements": project_requirements,
+
+            "permitted_uses": [],
+
+            "conditional_uses": [],
+
+            "verification_items": (
+                [
+                    (
+                        "eCode360 could not be retrieved automatically."
+                    ),
+                    (
+                        "Official municipal zoning information was "
+                        "successfully retrieved."
+                    ),
+                    (
+                        "Property-specific zoning was resolved from "
+                        "authoritative parcel evidence."
+                    ),
+                    (
+                        "District-specific numerical requirements "
+                        "must still be verified against the applicable "
+                        "current schedule."
+                    ),
+                ]
+                if has_verified_property_zoning
+                else [
+                    (
+                        "eCode360 could not be retrieved automatically."
+                    ),
+                    (
+                        "Official municipal zoning information was "
+                        "successfully retrieved."
+                    ),
+                    (
+                        "The actual parcel zoning district still "
+                        "requires authoritative property-location "
+                        "resolution."
+                    ),
+                    (
+                        "Numerical requirements should only be reported "
+                        "when explicitly extracted from the authoritative "
+                        "municipal code or schedule."
+                    ),
+                ]
+            ),
+
+            "source_retrieved_at": retrieved_at,
+
+            "confidence": (
+                "PROPERTY_ZONING_AND_OFFICIAL_SOURCE_RETRIEVED"
+                if has_verified_property_zoning
+                else "OFFICIAL_SOURCE_RETRIEVED"
+            ),
+
+            "notes": [
+                (
+                    f"eCode retrieval status: {ecode_status}."
+                ),
+                (
+                    f"Official municipal retrieval status: "
+                    f"{official_status}."
+                ),
+                (
+                    "Property-specific zoning evidence was supplied "
+                    "to the zoning engine."
+                    if has_verified_property_zoning
+                    else
+                    "No verified property-specific zoning evidence "
+                    "was supplied to the zoning engine."
+                ),
+            ],
+        }
+
+
+    # --------------------------------------------------------
+    # Both sources failed
+    # --------------------------------------------------------
+
+    notes: list[str] = []
+
+    if ecode_meta.get("error"):
+        notes.append(
+            "eCode360: "
+            + str(ecode_meta["error"])
+        )
+
+    if official_meta.get("error"):
+        notes.append(
+            "Official municipal source: "
+            + str(official_meta["error"])
+        )
+
+    return {
+        "municipality": config["canonical_name"],
+
+        "zoning_district": (
+            property_zoning_district
+            if has_verified_property_zoning
+            else "VERIFY"
+        ),
+
+        "property_zoning": property_zoning,
+
+        "source": _source_metadata(
+            municipality=config["canonical_name"],
+            source_type="eCode360 + Official Municipality",
+            url=ecode_config.get("url"),
+            description=(
+                "Authoritative municipal zoning sources."
+            ),
+            authoritative=True,
+        ),
+
+        "bulk_requirements": [],
+
+        "project_requirements": [],
+
+        "permitted_uses": [],
+
+        "conditional_uses": [],
+
+        "verification_items": [
+            (
+                "The authoritative eCode360 source could not "
+                "be retrieved automatically."
+            ),
+            (
+                "The official municipal fallback could not "
+                "be retrieved automatically."
+            ),
+            (
+                "MIDRA will not guess zoning or bulk requirements."
+            ),
+            (
+                "Verify the municipality's current zoning ordinance "
+                "before relying on requirements."
+            ),
+        ],
+
+        "source_retrieved_at": retrieved_at,
+
+        "confidence": "SOURCE_RETRIEVAL_FAILED",
+
+        "notes": notes,
+    }
+
+
+# ============================================================
+# OPTIONAL SOURCE REGISTRY HELPERS
+# ============================================================
+
+def list_registered_municipalities() -> list[str]:
+    """
+    Return municipalities currently registered in the MIDRA
+    zoning source registry.
+    """
+    return sorted(
+        config["canonical_name"]
+        for config in MUNICIPALITY_SOURCES.values()
+    )
+
+
+def get_municipality_source_config(
+    municipality: str,
+) -> dict[str, Any] | None:
+    """
+    Return the configured source metadata for a municipality.
+
+    Intended for administrative/debugging use.
+    """
+    return _get_source_config(
+        municipality
+    )

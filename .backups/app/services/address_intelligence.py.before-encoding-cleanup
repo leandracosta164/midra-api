@@ -1,0 +1,1879 @@
+﻿"""
+
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from typing import Any
+
+import httpx
+
+
+# ============================================================
+# CONFIGURATION
+# ============================================================
+
+GEOCODER_URL = (
+    "https://geo.nj.gov/arcgis/rest/services/"
+    "Tasks/NJ_Geocode/GeocodeServer/findAddressCandidates"
+)
+
+PARCEL_QUERY_URL = (
+    "https://maps.nj.gov/arcgis/rest/services/"
+    "Framework/Cadastral/MapServer/0/query"
+    feature: dict[str, Any],
+    *,
+    geocoded_city: str | None,
+    geocoded_zip: str | None,
+    geocoded_address: str | None,
+) -> int:
+
+    parcel = _normalize_parcel(
+        feature
+    )
+
+    score = 0
+
+    parcel_city = _normalize_text(
+        parcel.get(
+            "city_state"
+        )
+    )
+
+    parcel_address = _normalize_text(
+        parcel.get(
+            "street_address"
+        )
+    )
+
+    parcel_zip = _normalize_text(
+        parcel.get(
+            "zip5"
+        )
+    )
+
+    target_city = _normalize_text(
+        geocoded_city
+    )
+
+    target_zip = _normalize_text(
+        geocoded_zip
+    )
+
+    target_address = _normalize_text(
+        geocoded_address
+    )
+
+    # --------------------------------------------------------
+    # ZIP agreement
+    # --------------------------------------------------------
+
+    if (
+        target_zip
+        and parcel_zip
+        and target_zip == parcel_zip
+    ):
+        score += 30
+
+    # --------------------------------------------------------
+    # Municipality/city agreement
+    # --------------------------------------------------------
+
+    if (
+        target_city
+        and parcel_city
+        and target_city in parcel_city
+    ):
+        score += 25
+
+    # --------------------------------------------------------
+    # Street/address agreement
+    # --------------------------------------------------------
+
+    if (
+        target_address
+        and parcel_address
+        and parcel_address in target_address
+    ):
+        score += 35
+
+    elif (
+        target_address
+        and parcel_address
+        and target_address in parcel_address
+    ):
+        score += 35
+
+    # --------------------------------------------------------
+    # Parcel has usable identifiers
+    # --------------------------------------------------------
+
+    if parcel.get(
+        "pams_pin"
+    ):
+        score += 5
+
+    if (
+        parcel.get("block")
+        and parcel.get("lot")
+    ):
+        score += 5
+
+    return score
+
+
+# ============================================================
+# FIND PARCEL BY POINT
+# ============================================================
+
+PS C:\Users\Leandra Costa\Desktop\MIDRA_UNIFIED\midra-api> 
+
+
+Pasted code.py
+Python
+
+ it stopped/frozen and didn't bring any result 
+
+
+
+We need the other terminal You should have another VS Code terminal/tab running something like: PowerShell
+
+I can't find it 
+
+
+Pasted code.py
+Python
+PLEASE MAKE ALL CHANGES NECESSARY AND SEND ME THE FULL CODE TO REPLACE AT ONCE. IT IS TAKING WAY MORE TIME THAT I CAN'T AFFORD . HERE IS THE ENTIRE CODE. FROM NOW ON STOP ASKING FOR PIECES OF THE CODE AND ALWAYS TAkE YOUR TIME TO FIX IT ALL AT ONCE AND SEND IT TO ME AS FULL. We NEED TO KEEP MOVING ON. DO NOT LOSE FOCUS! 
+
+Yes â€” we found the immediate problem, and it is not the parcel logic.
+
+This error:
+
+address_intelligence.py", line 8
+where? that's how the website looks like now
+       ^
+SyntaxError: unterminated string literal
+means that extra conversational text accidentally got pasted into address_intelligence.py. That text is not Python code.
+
+The complete corrected file I generated from your full source was already syntax-validated successfully. 
+
+
+Do this â€” replace the entire file
+Do not manually copy sections anymore.
+
+Download the complete corrected file:
+
+Download the corrected address_intelligence.py
+
+Then:
+
+Open your project:
+
+C:\Users\Leandra Costa\Desktop\MIDRA_UNIFIED\midra-api
+Go into:
+
+app
+â†’ services
+Find:
+
+address_intelligence.py
+Replace that entire file with the downloaded address_intelligence_fixed.py.
+
+Make sure the final filename is exactly:
+
+address_intelligence.py
+Not:
+
+address_intelligence_fixed.py
+address_intelligence.py.txt
+Then verify it
+In PowerShell:
+
+python -m py_compile .\app\services\address_intelligence.py
+You want no output at all and then:
+
+PS C:\Users\Leandra Costa\Desktop\MIDRA_UNIFIED\midra-api>
+Then start the API
+Because we previously had an old Uvicorn process occupying port 8000, first check:
+
+Get-NetTCPConnection -LocalPort 8000 -State Listen
+If it shows a listener, don't start another Uvicorn instance yet.
+
+If nothing is listening, run:
+
+python -m uvicorn app.main:app --reload --port 8000
+We are not going back into individual functions. The full corrected file is the source of truth now.
+
+Once py_compile succeeds, send me that one result and we'll immediately test 922 State Highway 33.
+
+
+address_intelligence_fixed.py
+Code
+
+
+PS C:\Users\Leandra Costa\Desktop\MIDRA_UNIFIED> cd midra-api
+PS C:\Users\Leandra Costa\Desktop\MIDRA_UNIFIED\midra-api> python -m py_compile .\app\services\address_intelligence.py
+  File ".\app\services\address_intelligence.py", line 8
+    where? that's how the website looks like now
+               ^
+SyntaxError: unterminated string literal (detected at line 8)
+PS C:\Users\Leandra Costa\Desktop\MIDRA_UNIFIED\midra-api> 
+
+
+You're right to flag this. The file on your computer was not actually replaced with the corrected file. The error you're seeing is still coming from the old/broken address_intelligence.py.
+
+The corrected file I generated starts with the proper Python module docstring; it does not have where? that's how the website looks like now at line 8.
+
+Let's do this cleanly
+First, do not edit any code manually.
+
+You need to replace the entire current file with this corrected file:
+
+Download the corrected address_intelligence.py
+
+Then make sure Windows hasn't renamed it to:
+
+address_intelligence_fixed.py
+You need the file in:
+
+C:\Users\Leandra Costa\Desktop\MIDRA_UNIFIED\midra-api\app\services\
+with the exact filename:
+
+address_intelligence.py
+Before compiling, verify line 8
+Run:
+
+Get-Content .\app\services\address_intelligence.py | Select-Object -First 12
+The beginning should look like:
+
+"""
+MIDRA Engineering
+Address & Parcel Intelligence
+
+Purpose
+-------
+Resolve a New Jersey property address into:
+
+    Address
+        â†“
+    NJ statewide geocoding
+It must not contain:
+
+where? that's how the website looks like now
+Then compile
+python -m py_compile .\app\services\address_intelligence.py
+If it returns to the prompt with no error, we're back on solid ground.
+
+Don't start Uvicorn yet. Send me the output of those two commands, and we'll move directly to the API test.
+
+
+address_intelligence_fixed.py
+Code
+
+
+851bcf61-e53c-47a6-833e-a2f0901fe9fe.png
+
+Yes â€” the screenshot confirms exactly what happened. Your address_intelligence.py currently contains old conversation/prompt text at the very top:
+
+Sat, Aug 1 at 12:32 AM
+Build a complete Astro website...
+midra-web.zip
+Zip Archive
+where? that's how the website looks like now
+What if the ...
+That is not Python, which is why Python stops at line 8.
+
+The corrected file I generated has been syntax-validated and begins correctly with:
+
+"""
+MIDRA Engineering
+Address & Parcel Intelligence
+
+Purpose
+-------
+Resolve a New Jersey property address into:
+So let's stop editing individual pieces.
+
+Do this one time
+1. Download the complete corrected file
+Download the corrected address_intelligence.py
+
+2. In VS Code
+Open:
+
+midra-api
+â””â”€â”€ app
+    â””â”€â”€ services
+        â””â”€â”€ address_intelligence.py
+Open the downloaded corrected file in VS Code.
+
+Select All â†’ Copy.
+
+Then open your project's:
+
+app/services/address_intelligence.py
+Do:
+
+Ctrl+A â†’ Paste â†’ Ctrl+S
+
+This replaces the entire 1,520-line file, not just the broken section.
+
+3. Immediately verify the beginning
+Run:
+
+Get-Content .\app\services\address_intelligence.py | Select-Object -First 12
+You should see:
+
+"""
+MIDRA Engineering
+Address & Parcel Intelligence
+
+Purpose
+-------
+Resolve a New Jersey property address into:
+
+    Address
+        â†“
+    NJ statewide geocoding
+There should be absolutely none of this:
+
+Sat, Aug 1 at 12:32 AM
+Build a complete Astro website...
+where? that's how the website looks like now
+4. Compile
+Then:
+
+python -m py_compile .\app\services\address_intelligence.py
+Expected result: no output.
+
+Do not start Uvicorn until that command succeeds.
+
+And yes, I'm staying focused. From this point forward, for source-file changes I'll give you the complete file, not make you chase individual indentation errors.
+
+
+address_intelligence_fixed.py
+Code
+
+
+address_intelligence_fixed.py
+
+
+"""
+MIDRA Engineering
+Address & Parcel Intelligence
+
+Purpose
+-------
+Resolve a New Jersey property address into:
+
+    Address
+        â†“
+    NJ statewide geocoding
+        â†“
+    Coordinates
+        â†“
+    NJ statewide parcel
+        â†“
+    Municipality
+        â†“
+    County
+        â†“
+    Block / Lot
+        â†“
+    Parcel identifiers
+
+Authoritative sources
+---------------------
+NJ Office of GIS statewide geocoding service
+NJ Office of GIS statewide parcel service
+
+Important
+---------
+This service does NOT determine zoning.
+
+Zoning determination remains a separate layer using the
+municipality's authoritative zoning map/code.
+
+The parcel lookup uses a controlled spatial search around
+the geocoded address because an address point may fall on
+a street, driveway, or frontage rather than inside the
+parcel polygon itself.
+
+The service does not claim ownership, legal status,
+development rights, or entitlement.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from typing import Any
+
+import httpx
+
+
+# ============================================================
+# CONFIGURATION
+# ============================================================
+
+GEOCODER_URL = (
+    "https://geo.nj.gov/arcgis/rest/services/"
+    "Tasks/NJ_Geocode/GeocodeServer/findAddressCandidates"
+)
+
+PARCEL_QUERY_URL = (
+    "https://maps.nj.gov/arcgis/rest/services/"
+    "Framework/Cadastral/MapServer/0/query"
+)
+
+REQUEST_TIMEOUT = httpx.Timeout(
+    connect=10.0,
+    read=30.0,
+    write=10.0,
+    pool=10.0,
+)
+
+USER_AGENT = (
+    "MIDRA-Engineering-Property-Intelligence/1.0 "
+    "(NJ address and parcel resolution)"
+)
+
+# Controlled search distances in meters.
+#
+# We start very close to the geocoded point and expand only
+# when necessary. This reduces the chance of selecting an
+# unrelated neighboring parcel.
+PARCEL_SEARCH_DISTANCES_METERS = (
+    5,
+    15,
+    30,
+    50,
+)
+
+
+# ============================================================
+# HELPERS
+# ============================================================
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _headers() -> dict[str, str]:
+    return {
+        "User-Agent": USER_AGENT,
+        "Accept": "application/json",
+    }
+
+
+def _safe_float(value: Any) -> float | None:
+    try:
+        if value is None:
+            return None
+
+        return float(value)
+
+    except (TypeError, ValueError):
+        return None
+
+
+def _clean(value: Any) -> str | None:
+    if value is None:
+        return None
+
+    text = str(value).strip()
+
+    return text or None
+
+
+def _normalize_text(value: Any) -> str:
+    if value is None:
+        return ""
+
+    return " ".join(
+        str(value)
+        .strip()
+        .upper()
+        .split()
+    )
+
+
+def _extract_house_number(value: Any) -> str:
+    text = _normalize_text(value)
+
+    if not text:
+        return ""
+
+    parts = text.split()
+
+    if not parts:
+        return ""
+
+    first = parts[0]
+
+    digits = ""
+
+    for char in first:
+        if char.isdigit():
+            digits += char
+        else:
+            break
+
+    return digits
+
+
+def _normalize_street(value: Any) -> str:
+    text = _normalize_text(value)
+
+    if not text:
+        return ""
+
+    replacements = {
+        "STATE HIGHWAY": "ROUTE",
+        "STATE HWY": "ROUTE",
+        "HIGHWAY": "ROUTE",
+        "HWY": "ROUTE",
+        "NJ ROUTE": "ROUTE",
+        "NJ-": "ROUTE ",
+        "N J ROUTE": "ROUTE",
+        "ROAD": "RD",
+        "STREET": "ST",
+        "AVENUE": "AVE",
+        "DRIVE": "DR",
+        "BOULEVARD": "BLVD",
+        "LANE": "LN",
+        "COURT": "CT",
+        "PARKWAY": "PKWY",
+        "TURNPIKE": "TPKE",
+    }
+
+    for source, target in replacements.items():
+        text = text.replace(source, target)
+
+    return " ".join(text.split())
+
+
+def _street_tokens(value: Any) -> set[str]:
+    text = _normalize_street(value)
+
+    if not text:
+        return set()
+
+    tokens = text.split()
+
+    # Remove the house number from street comparison.
+    if tokens and tokens[0].isdigit():
+        tokens = tokens[1:]
+
+    return set(tokens)
+
+
+def _point_in_ring(
+    longitude: float,
+    latitude: float,
+    ring: list[list[float]],
+) -> bool:
+
+    inside = False
+
+    if len(ring) < 3:
+        return False
+
+    j = len(ring) - 1
+
+    for i in range(len(ring)):
+
+        xi = float(ring[i][0])
+        yi = float(ring[i][1])
+
+        xj = float(ring[j][0])
+        yj = float(ring[j][1])
+
+        intersects = (
+            (yi > latitude) != (yj > latitude)
+            and longitude
+            < (
+                (xj - xi)
+                * (latitude - yi)
+                / ((yj - yi) or 1e-12)
+                + xi
+            )
+        )
+
+        if intersects:
+            inside = not inside
+
+        j = i
+
+    return inside
+
+
+def _point_in_parcel_geometry(
+    geometry: dict[str, Any],
+    *,
+    longitude: float,
+    latitude: float,
+) -> bool:
+
+    rings = geometry.get(
+        "rings",
+        [],
+    )
+
+    if not rings:
+        return False
+
+    return any(
+        _point_in_ring(
+            longitude,
+            latitude,
+            ring,
+        )
+        for ring in rings
+        if isinstance(ring, list)
+    )
+
+
+# ============================================================
+# GEOCODING
+# ============================================================
+
+def geocode_new_jersey_address(
+    address: str,
+) -> dict[str, Any]:
+    """
+    Resolve a New Jersey address using the official
+    NJ Office of GIS statewide geocoder.
+
+    Returns the best candidate together with its score
+    and coordinates.
+    """
+
+    retrieved_at = _utc_now()
+
+    if not address or len(address.strip()) < 3:
+        return {
+            "status": "INVALID_ADDRESS",
+            "address": address,
+            "retrieved_at": retrieved_at,
+            "candidates": [],
+            "selected": None,
+            "notes": [
+                "Address must contain at least three characters."
+            ],
+        }
+
+    params = {
+        "SingleLine": address.strip(),
+        "f": "json",
+        "outFields": "*",
+        "maxLocations": 5,
+        "outSR": 4326,
+        "forStorage": "false",
+    }
+
+    try:
+
+        with httpx.Client(
+            timeout=REQUEST_TIMEOUT,
+            follow_redirects=True,
+            headers=_headers(),
+        ) as client:
+
+            response = client.get(
+                GEOCODER_URL,
+                params=params,
+            )
+
+            response.raise_for_status()
+
+            data = response.json()
+
+    except httpx.HTTPError as exc:
+
+        return {
+            "status": "GEOCODER_ERROR",
+            "address": address,
+            "retrieved_at": retrieved_at,
+            "candidates": [],
+            "selected": None,
+            "notes": [
+                f"NJ statewide geocoder request failed: {exc}"
+            ],
+        }
+
+    except ValueError as exc:
+
+        return {
+            "status": "GEOCODER_INVALID_RESPONSE",
+            "address": address,
+            "retrieved_at": retrieved_at,
+            "candidates": [],
+            "selected": None,
+            "notes": [
+                f"NJ geocoder returned invalid JSON: {exc}"
+            ],
+        }
+
+    candidates = data.get(
+        "candidates",
+        [],
+    )
+
+    if not candidates:
+
+        return {
+            "status": "NO_MATCH",
+            "address": address,
+            "retrieved_at": retrieved_at,
+            "candidates": [],
+            "selected": None,
+            "notes": [
+                "No NJ statewide geocoding candidate was found."
+            ],
+        }
+
+    normalized_candidates: list[
+        dict[str, Any]
+    ] = []
+
+    for candidate in candidates:
+
+        location = candidate.get(
+            "location",
+            {},
+        )
+
+        attributes = candidate.get(
+            "attributes",
+            {},
+        )
+
+        normalized_candidates.append(
+            {
+                "match_address": _clean(
+                    attributes.get(
+                        "Match_addr"
+                    )
+                ),
+
+                "score": _safe_float(
+                    candidate.get(
+                        "score"
+                    )
+                ),
+
+                "status": _clean(
+                    attributes.get(
+                        "Status"
+                    )
+                ),
+
+                "city": _clean(
+                    attributes.get(
+                        "City"
+                    )
+                ),
+
+                "county": _clean(
+                    attributes.get(
+                        "Subregion"
+                    )
+                ),
+
+                "state": _clean(
+                    attributes.get(
+                        "Region"
+                    )
+                ),
+
+                "postal_code": _clean(
+                    attributes.get(
+                        "Postal"
+                    )
+                ),
+
+                "x": _safe_float(
+                    location.get(
+                        "x"
+                    )
+                ),
+
+                "y": _safe_float(
+                    location.get(
+                        "y"
+                    )
+                ),
+            }
+        )
+
+    selected = normalized_candidates[0]
+
+    score = selected.get(
+        "score"
+    )
+
+    if score is not None and score >= 95:
+        status = "HIGH_CONFIDENCE"
+
+    elif score is not None and score >= 85:
+        status = "GOOD_MATCH"
+
+    elif score is not None and score >= 70:
+        status = "REVIEW_MATCH"
+
+    else:
+        status = "LOW_CONFIDENCE"
+
+    return {
+        "status": status,
+        "address": address,
+        "retrieved_at": retrieved_at,
+        "candidates": normalized_candidates,
+        "selected": selected,
+        "source": {
+            "source_type": "NJ Office of GIS",
+            "service": "NJ_Geocode",
+            "url": GEOCODER_URL,
+            "authoritative": True,
+        },
+        "notes": [
+            (
+                "Address resolution uses the New Jersey "
+                "statewide geocoding service."
+            ),
+        ],
+    }
+
+
+# ============================================================
+# PARCEL FIELD DEFINITIONS
+# ============================================================
+
+PARCEL_OUT_FIELDS = (
+    "OBJECTID,"
+    "PAMS_PIN,"
+    "PCL_MUN,"
+    "PCLBLOCK,"
+    "PCLLOT,"
+    "PCLQCODE,"
+    "PCLLASTUPD,"
+    "PIN_NODUP,"
+    "COUNTY,"
+    "MUN_NAME,"
+    "CD_CODE,"
+    "PROP_CLASS,"
+    "PROP_LOC,"
+    "ST_ADDRESS,"
+    "CITY_STATE,"
+    "ZIP_CODE,"
+    "ZIP5,"
+    "ZIP_PLUS4,"
+    "GIS_PIN,"
+    "PROP_USE,"
+    "BLDG_DESC,"
+    "LAND_DESC,"
+    "CALC_ACRE,"
+    "PCL_GUID,"
+    "PCL_PBDATE,"
+    "SHAPE_Area,"
+    "SHAPE_Length"
+)
+
+
+# ============================================================
+# PARCEL NORMALIZATION
+# ============================================================
+
+def _normalize_parcel(
+    feature: dict[str, Any],
+) -> dict[str, Any]:
+
+    attributes = feature.get(
+        "attributes",
+        {},
+    )
+
+    geometry = feature.get(
+        "geometry",
+        {},
+    )
+
+    return {
+        "object_id": attributes.get(
+            "OBJECTID"
+        ),
+
+        "pams_pin": _clean(
+            attributes.get(
+                "PAMS_PIN"
+            )
+        ),
+
+        "gis_pin": _clean(
+            attributes.get(
+                "GIS_PIN"
+            )
+        ),
+
+        "pin_no_duplicate": _clean(
+            attributes.get(
+                "PIN_NODUP"
+            )
+        ),
+
+        "municipality_code": _clean(
+            attributes.get(
+                "PCL_MUN"
+            )
+        ),
+
+        "municipality": _clean(
+            attributes.get(
+                "MUN_NAME"
+            )
+        ),
+
+        "county": _clean(
+            attributes.get(
+                "COUNTY"
+            )
+        ),
+
+        "block": _clean(
+            attributes.get(
+                "PCLBLOCK"
+            )
+        ),
+
+        "lot": _clean(
+            attributes.get(
+                "PCLLOT"
+            )
+        ),
+
+        "qualifier": _clean(
+            attributes.get(
+                "PCLQCODE"
+            )
+        ),
+
+        "property_class": _clean(
+            attributes.get(
+                "PROP_CLASS"
+            )
+        ),
+
+        "property_location": _clean(
+            attributes.get(
+                "PROP_LOC"
+            )
+        ),
+
+        "street_address": _clean(
+            attributes.get(
+                "ST_ADDRESS"
+            )
+        ),
+
+        "city_state": _clean(
+            attributes.get(
+                "CITY_STATE"
+            )
+        ),
+
+        "zip_code": _clean(
+            attributes.get(
+                "ZIP_CODE"
+            )
+        ),
+
+        "zip5": _clean(
+            attributes.get(
+                "ZIP5"
+            )
+        ),
+
+        "zip_plus4": _clean(
+            attributes.get(
+                "ZIP_PLUS4"
+            )
+        ),
+
+        "acreage": _safe_float(
+            attributes.get(
+                "CALC_ACRE"
+            )
+        ),
+
+        "property_use": _clean(
+            attributes.get(
+                "PROP_USE"
+            )
+        ),
+
+        "building_description": _clean(
+            attributes.get(
+                "BLDG_DESC"
+            )
+        ),
+
+        "land_description": _clean(
+            attributes.get(
+                "LAND_DESC"
+            )
+        ),
+
+        "parcel_guid": _clean(
+            attributes.get(
+                "PCL_GUID"
+            )
+        ),
+
+        "parcel_publication_date": (
+            attributes.get(
+                "PCL_PBDATE"
+            )
+        ),
+
+        "shape_area": _safe_float(
+            attributes.get(
+                "SHAPE_Area"
+            )
+        ),
+
+        "shape_length": _safe_float(
+            attributes.get(
+                "SHAPE_Length"
+            )
+        ),
+
+        "geometry": geometry,
+    }
+
+
+# ============================================================
+# PARCEL QUERY
+# ============================================================
+
+def _query_parcels(
+    *,
+    longitude: float,
+    latitude: float,
+    distance_meters: float,
+) -> dict[str, Any]:
+
+    geometry = (
+        f"{longitude},{latitude}"
+    )
+
+    params = {
+        "f": "json",
+
+        "geometry": geometry,
+
+        "geometryType": (
+            "esriGeometryPoint"
+        ),
+
+        "inSR": "4326",
+
+        "spatialRel": (
+            "esriSpatialRelIntersects"
+        ),
+
+        "distance": distance_meters,
+
+        "units": "esriSRUnit_Meter",
+
+        "outFields": PARCEL_OUT_FIELDS,
+
+        "returnGeometry": "true",
+
+        "outSR": "4326",
+
+        "returnTrueCurves": "false",
+
+        "returnCentroid": "true",
+
+        "resultRecordCount": 25,
+
+        "orderByFields": (
+            "OBJECTID ASC"
+        ),
+    }
+
+    try:
+
+        with httpx.Client(
+            timeout=REQUEST_TIMEOUT,
+            follow_redirects=True,
+            headers=_headers(),
+        ) as client:
+
+            response = client.get(
+                PARCEL_QUERY_URL,
+                params=params,
+            )
+
+            response.raise_for_status()
+
+            data = response.json()
+
+    except httpx.HTTPError as exc:
+
+        return {
+            "status": "PARCEL_SERVICE_ERROR",
+            "features": [],
+            "notes": [
+                f"NJ parcel service request failed: {exc}"
+            ],
+        }
+
+    except ValueError as exc:
+
+        return {
+            "status": "PARCEL_INVALID_RESPONSE",
+            "features": [],
+            "notes": [
+                f"NJ parcel service returned invalid JSON: {exc}"
+            ],
+        }
+
+    if "error" in data:
+
+        return {
+            "status": "PARCEL_QUERY_ERROR",
+            "features": [],
+            "notes": [
+                str(
+                    data["error"]
+                )
+            ],
+        }
+
+    features = data.get(
+        "features",
+        [],
+    )
+
+    return {
+        "status": (
+            "PARCELS_FOUND"
+            if features
+            else "NO_PARCELS_FOUND"
+        ),
+        "features": features,
+        "notes": [],
+    }
+
+
+# ============================================================
+# PARCEL SCORING
+# ============================================================
+
+def _score_parcel(
+    feature: dict[str, Any],
+    *,
+    geocoded_city: str | None,
+    geocoded_zip: str | None,
+    geocoded_address: str | None,
+    longitude: float | None = None,
+    latitude: float | None = None,
+    search_distance_meters: float | None = None,
+) -> int:
+
+    parcel = _normalize_parcel(
+        feature
+    )
+
+    score = 0
+
+    parcel_city = _normalize_text(
+        parcel.get(
+            "city_state"
+        )
+    )
+
+    parcel_address = _normalize_text(
+        parcel.get(
+            "street_address"
+        )
+    )
+
+    parcel_location = _normalize_text(
+        parcel.get(
+            "property_location"
+        )
+    )
+
+    parcel_zip = _normalize_text(
+        parcel.get(
+            "zip5"
+        )
+    )
+
+    target_city = _normalize_text(
+        geocoded_city
+    )
+
+    target_zip = _normalize_text(
+        geocoded_zip
+    )
+
+    target_address = _normalize_text(
+        geocoded_address
+    )
+
+    # --------------------------------------------------------
+    # ZIP agreement
+    # --------------------------------------------------------
+
+    if (
+        target_zip
+        and parcel_zip
+        and target_zip == parcel_zip
+    ):
+        score += 20
+
+    # --------------------------------------------------------
+    # Municipality / postal city agreement
+    #
+    # A mismatch is intentionally NOT penalized.
+    #
+    # Postal municipality and tax/GIS municipality can differ.
+    # --------------------------------------------------------
+
+    if (
+        target_city
+        and parcel_city
+        and target_city in parcel_city
+    ):
+        score += 10
+
+    # --------------------------------------------------------
+    # House number agreement
+    # --------------------------------------------------------
+
+    target_house = _extract_house_number(
+        target_address
+    )
+
+    parcel_house = _extract_house_number(
+        parcel_address
+    )
+
+    location_house = _extract_house_number(
+        parcel_location
+    )
+
+    if (
+        target_house
+        and (
+            target_house == parcel_house
+            or target_house == location_house
+        )
+    ):
+        score += 20
+
+    # --------------------------------------------------------
+    # Street / route agreement
+    #
+    # Handles variations such as:
+    #
+    # STATE HIGHWAY 33
+    # STATE HWY 33
+    # ROUTE 33
+    # NJ-33
+    # --------------------------------------------------------
+
+    target_streets = _street_tokens(
+        target_address
+    )
+
+    parcel_streets = (
+        _street_tokens(parcel_address)
+        | _street_tokens(parcel_location)
+    )
+
+    if (
+        target_streets
+        and parcel_streets
+    ):
+
+        common_tokens = (
+            target_streets
+            & parcel_streets
+        )
+
+        if common_tokens:
+            score += 20
+
+    # --------------------------------------------------------
+    # Spatial evidence
+    #
+    # This is intentionally the strongest signal.
+    # --------------------------------------------------------
+
+    if (
+        longitude is not None
+        and latitude is not None
+    ):
+
+        geometry = parcel.get(
+            "geometry",
+            {}
+        )
+
+        if _point_in_parcel_geometry(
+            geometry,
+            longitude=longitude,
+            latitude=latitude,
+        ):
+            score += 35
+
+    # --------------------------------------------------------
+    # Controlled proximity evidence
+    #
+    # This is useful when the geocoder point lands on a road,
+    # driveway, or frontage just outside the parcel polygon.
+    # --------------------------------------------------------
+
+    if search_distance_meters is not None:
+
+        if search_distance_meters <= 5:
+            score += 20
+
+        elif search_distance_meters <= 15:
+            score += 15
+
+        elif search_distance_meters <= 30:
+            score += 8
+
+    # --------------------------------------------------------
+    # Parcel identifiers
+    # --------------------------------------------------------
+
+    if parcel.get(
+        "pams_pin"
+    ):
+        score += 5
+
+    if (
+        parcel.get("block")
+        and parcel.get("lot")
+    ):
+        score += 5
+
+    return min(
+        score,
+        100,
+    )
+
+
+# ============================================================
+# FIND PARCEL BY POINT
+# ============================================================
+
+def find_parcel_by_point(
+    longitude: float,
+    latitude: float,
+    *,
+    geocoded_city: str | None = None,
+    geocoded_zip: str | None = None,
+    geocoded_address: str | None = None,
+) -> dict[str, Any]:
+    """
+    Find the NJ statewide parcel associated with a geocoded
+    property location.
+
+    Strategy
+    --------
+    1. Search a very small radius first.
+    2. Expand gradually if necessary.
+    3. Score returned parcels against the geocoder's city,
+       ZIP and matched address.
+    4. Only return a parcel when the evidence is sufficient.
+
+    This prevents a nearby but unrelated parcel from being
+    silently assigned to the property.
+    """
+
+    retrieved_at = _utc_now()
+
+    all_candidates: list[
+        dict[str, Any]
+    ] = []
+
+    successful_distances: list[
+        float
+    ] = []
+
+    for distance in PARCEL_SEARCH_DISTANCES_METERS:
+
+        result = _query_parcels(
+            longitude=longitude,
+            latitude=latitude,
+            distance_meters=distance,
+        )
+
+        if result["status"] in {
+            "PARCEL_SERVICE_ERROR",
+            "PARCEL_INVALID_RESPONSE",
+            "PARCEL_QUERY_ERROR",
+        }:
+
+            return {
+                "status": result["status"],
+                "retrieved_at": retrieved_at,
+                "parcel": None,
+                "notes": result.get(
+                    "notes",
+                    [],
+                ),
+            }
+
+        features = result.get(
+            "features",
+            [],
+        )
+
+        if not features:
+            continue
+
+        successful_distances.append(
+            distance
+        )
+
+        for feature in features:
+
+            normalized = _normalize_parcel(
+                feature
+            )
+
+            candidate_score = _score_parcel(
+                feature,
+                geocoded_city=geocoded_city,
+                geocoded_zip=geocoded_zip,
+                geocoded_address=geocoded_address,
+                longitude=longitude,
+                latitude=latitude,
+                search_distance_meters=distance,
+            )
+
+            all_candidates.append(
+                {
+                    "score": candidate_score,
+                    "search_distance_meters": distance,
+                    "parcel": normalized,
+                }
+            )
+
+        # Once a close search has returned plausible candidates,
+        # do not unnecessarily search a much larger radius.
+        #
+        # A high-confidence address match should be resolved
+        # locally whenever possible.
+
+        close_candidates = [
+            candidate
+            for candidate in all_candidates
+            if candidate["search_distance_meters"]
+            <= 15
+        ]
+
+        if close_candidates:
+            break
+
+    if not all_candidates:
+
+        return {
+            "status": "NO_PARCEL_MATCH",
+            "retrieved_at": retrieved_at,
+            "parcel": None,
+            "notes": [
+                (
+                    "No statewide parcel polygon was found "
+                    "within the controlled search distances "
+                    "around the resolved address."
+                )
+            ],
+        }
+
+    # --------------------------------------------------------
+    # Sort:
+    #
+    # 1. strongest address/city/ZIP evidence
+    # 2. shortest search distance
+    # --------------------------------------------------------
+
+    all_candidates.sort(
+        key=lambda item: (
+            -item["score"],
+            item["search_distance_meters"],
+        )
+    )
+
+    best = all_candidates[0]
+
+    best_score = best["score"]
+
+    # --------------------------------------------------------
+    # Minimum confidence threshold
+    # --------------------------------------------------------
+    #
+    # We require meaningful evidence before assigning a
+    # property parcel.
+    #
+    # Address + ZIP agreement can produce a strong match.
+    # If neither exists, we refuse to guess.
+    # --------------------------------------------------------
+
+    if best_score < 35:
+
+        return {
+            "status": "PARCEL_MATCH_REQUIRES_REVIEW",
+            "retrieved_at": retrieved_at,
+            "parcel": None,
+            "candidates": [
+                {
+                    "score": item["score"],
+                    "search_distance_meters": item[
+                        "search_distance_meters"
+                    ],
+                    "parcel": item["parcel"],
+                }
+                for item in all_candidates[:10]
+            ],
+            "notes": [
+                (
+                    "Nearby parcels were found, but the "
+                    "available parcel attributes did not "
+                    "provide sufficient evidence to safely "
+                    "assign one to the requested address."
+                ),
+                (
+                    "MIDRA will not guess the parcel."
+                ),
+            ],
+        }
+
+    return {
+        "status": "PARCEL_FOUND",
+        "retrieved_at": retrieved_at,
+        "parcel": best["parcel"],
+        "match_score": best_score,
+        "search_distance_meters": (
+            best["search_distance_meters"]
+        ),
+        "candidate_count": len(
+            all_candidates
+        ),
+        "source": {
+            "source_type": "NJ Office of GIS",
+            "service": (
+                "Parcels and MOD-IV Composite of New Jersey"
+            ),
+            "url": PARCEL_QUERY_URL,
+            "authoritative": True,
+        },
+        "notes": [
+            (
+                "Parcel was identified using the NJ Office "
+                "of GIS statewide parcel layer."
+            ),
+            (
+                "The search used a controlled spatial radius "
+                "around the NJ statewide geocoded address."
+            ),
+        ],
+    }
+
+
+# ============================================================
+# COMPLETE ADDRESS â†’ PARCEL RESOLUTION
+# ============================================================
+
+def resolve_new_jersey_property(
+    address: str,
+) -> dict[str, Any]:
+    """
+    Complete NJ address resolution.
+
+    Flow:
+
+        address
+          â†“
+        statewide geocoder
+          â†“
+        coordinates
+          â†“
+        statewide parcel search
+          â†“
+        municipality / county / block / lot
+    """
+
+    resolved_at = _utc_now()
+
+    geocode = geocode_new_jersey_address(
+        address
+    )
+
+    selected = geocode.get(
+        "selected"
+    )
+
+    if not selected:
+
+        return {
+            "status": "ADDRESS_NOT_RESOLVED",
+
+            "requested_address": address,
+
+            "resolved_at": resolved_at,
+
+            "geocoding": geocode,
+
+            "parcel": None,
+
+            "municipality": None,
+
+            "county": None,
+
+            "coordinates": None,
+
+            "verification_items": [
+                (
+                    "The address could not be confidently "
+                    "resolved using the NJ statewide geocoder."
+                ),
+                (
+                    "Parcel and zoning analysis cannot be "
+                    "considered property-specific until the "
+                    "address is resolved."
+                ),
+            ],
+        }
+
+    longitude = selected.get(
+        "x"
+    )
+
+    latitude = selected.get(
+        "y"
+    )
+
+    if longitude is None or latitude is None:
+
+        return {
+            "status": "GEOCODE_NO_COORDINATES",
+
+            "requested_address": address,
+
+            "resolved_at": resolved_at,
+
+            "geocoding": geocode,
+
+            "parcel": None,
+
+            "municipality": None,
+
+            "county": None,
+
+            "coordinates": None,
+
+            "verification_items": [
+                (
+                    "The NJ geocoder returned a candidate "
+                    "without usable coordinates."
+                ),
+            ],
+        }
+
+    parcel_result = find_parcel_by_point(
+        longitude=longitude,
+        latitude=latitude,
+        geocoded_city=selected.get(
+            "city"
+        ),
+        geocoded_zip=selected.get(
+            "postal_code"
+        ),
+        geocoded_address=selected.get(
+            "match_address"
+        ),
+    )
+
+    parcel = parcel_result.get(
+        "parcel"
+    )
+
+    # --------------------------------------------------------
+    # Parcel not found
+    # --------------------------------------------------------
+
+    if not parcel:
+
+        return {
+            "status": (
+                "ADDRESS_RESOLVED_PARCEL_NOT_FOUND"
+                if parcel_result.get(
+                    "status"
+                ) == "NO_PARCEL_MATCH"
+                else parcel_result.get(
+                    "status",
+                    "ADDRESS_RESOLVED_PARCEL_REVIEW",
+                )
+            ),
+
+            "requested_address": address,
+
+            "resolved_at": resolved_at,
+
+            "matched_address": selected.get(
+                "match_address"
+            ),
+
+            "match_score": selected.get(
+                "score"
+            ),
+
+            "geocoding": geocode,
+
+            "parcel": None,
+
+            "municipality": selected.get(
+                "city"
+            ),
+
+            "county": selected.get(
+                "county"
+            ),
+
+            "coordinates": {
+                "longitude": longitude,
+                "latitude": latitude,
+            },
+
+            "verification_items": [
+                (
+                    "The address was successfully geocoded, "
+                    "but a sufficiently supported parcel "
+                    "could not yet be assigned."
+                ),
+                (
+                    "Parcel-specific zoning analysis should "
+                    "not proceed until the parcel is confirmed."
+                ),
+            ],
+
+            "parcel_service": parcel_result,
+        }
+
+    # --------------------------------------------------------
+    # Property resolved
+    # --------------------------------------------------------
+
+    municipality = (
+        parcel.get(
+            "municipality"
+        )
+        or selected.get(
+            "city"
+        )
+    )
+
+    county = (
+        parcel.get(
+            "county"
+        )
+        or selected.get(
+            "county"
+        )
+    )
+
+    return {
+        "status": "PROPERTY_RESOLVED",
+
+        "requested_address": address,
+
+        "resolved_at": resolved_at,
+
+        "matched_address": selected.get(
+            "match_address"
+        ),
+
+        "match_score": selected.get(
+            "score"
+        ),
+
+        "coordinates": {
+            "longitude": longitude,
+            "latitude": latitude,
+        },
+
+        "municipality": municipality,
+
+        "county": county,
+
+        "state": (
+            selected.get(
+                "state"
+            )
+            or "New Jersey"
+        ),
+
+        "parcel": parcel,
+
+        "geocoding": {
+            "status": geocode.get(
+                "status"
+            ),
+
+            "source": geocode.get(
+                "source"
+            ),
+        },
+
+        "parcel_source": parcel_result.get(
+            "source"
+        ),
+
+        "parcel_match": {
+            "score": parcel_result.get(
+                "match_score"
+            ),
+
+            "search_distance_meters": (
+                parcel_result.get(
+                    "search_distance_meters"
+                )
+            ),
+
+            "candidate_count": (
+                parcel_result.get(
+                    "candidate_count"
+                )
+            ),
+        },
+
+        "verification_items": [
+            (
+                "Parcel identity is based on the NJ Office "
+                "of GIS statewide geocoder and parcel layer."
+            ),
+            (
+                "The zoning district still requires a "
+                "separate authoritative zoning-map lookup."
+            ),
+        ],
+
+        "notes": [
+            (
+                "This resolver does not determine zoning."
+            ),
+            (
+                "This resolver does not determine legal "
+                "ownership or development entitlement."
+            ),
+        ],
+    }
+    

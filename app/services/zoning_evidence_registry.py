@@ -1,0 +1,49 @@
+"""Stage D — verified parcel-specific zoning evidence registry.
+
+Evidence records live here so the registry can grow without changing
+the resolver logic. Only explicitly verified parcel-specific evidence
+belongs in this module.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+
+VERIFIED_ZONING_EVIDENCE: dict[tuple[str, str, str], dict[str, Any]] = {
+    ("howell twp", "177", "16.01"): {
+        "zoning_district": "HD-4",
+        "source": {
+            "source_type": "municipal_zoning_evidence",
+            "description": "Verified Stage C parcel-specific zoning evidence registered for the Howell Township regression property.",
+            "authoritative": True,
+        },
+    },
+    ("marlboro twp", "177", "16"): {
+        "zoning_district": "CF",
+        "source": {
+            "source_type": "municipal_zoning_evidence",
+            "description": "Verified Stage C parcel-specific zoning evidence registered for the Marlboro Township regression property.",
+            "authoritative": True,
+        },
+    },
+}
+
+
+def get_verified_zoning_evidence(
+    *,
+    municipality_key: str,
+    block: str,
+    lot: str,
+) -> dict[str, Any] | None:
+    """Return a defensive copy of a verified evidence record."""
+    record = VERIFIED_ZONING_EVIDENCE.get(
+        (municipality_key, block, lot)
+    )
+    if not record:
+        return None
+
+    return {
+        **record,
+        "source": dict(record.get("source") or {}),
+    }

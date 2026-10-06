@@ -22,3 +22,8 @@ alembic/versions/*.py
 # OS
 .DS_Store
 Thumbs.db
+
+.venv/
+__pycache__/
+*.pyc
+.env

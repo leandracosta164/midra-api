@@ -1,0 +1,3661 @@
+﻿---
+import Layout from "../layouts/Layout.astro";
+import PropertyMap from "../components/property-intelligence/PropertyMap.astro";
+
+const projectGoals = [
+  { value: "buy", label: "Buy Property" },
+  { value: "pool", label: "Build a Pool" },
+  { value: "addition", label: "Home Addition" },
+  { value: "garage", label: "Garage" },
+  { value: "deck", label: "Deck / Patio" },
+  { value: "new_home", label: "Build a New Home" },
+  { value: "adu", label: "Build an ADU" },
+  { value: "driveway", label: "Driveway" },
+  { value: "subdivide", label: "Subdivide" },
+  { value: "invest", label: "Investment" },
+  { value: "other", label: "Something Else" }
+];
+---
+
+<Layout
+  title="MIDRA Property Intelligence | MIDRA Engineering"
+  description="Preliminary property intelligence from MIDRA Engineering â€” understand zoning, flood, environmental constraints and development potential."
+>
+
+  <!-- ==========================================================
+       PROPERTY INTELLIGENCE HERO
+  =========================================================== -->
+
+  <section class="pi-hero">
+
+    <div class="container">
+
+      <div class="pi-hero-grid">
+
+        <div class="pi-hero-copy">
+
+          <span class="eyebrow">
+            MIDRA INTELLIGENCEâ„¢
+          </span>
+
+          <h1>
+            Understand the property before you design the project.
+          </h1>
+
+          <p class="pi-intro">
+            Enter a property address and tell us what you're considering.
+            MIDRA organizes public property and engineering information into
+            a preliminary assessment designed to help you make a better-informed decision.
+          </p>
+
+          <!-- ======================================================
+               PROPERTY SEARCH
+          ======================================================= -->
+
+          <form id="property-form" class="search-card">
+
+            <div class="form-section">
+
+              <label for="address">
+                Property address
+              </label>
+
+              <div class="search-row">
+
+                <div class="address-autocomplete">
+
+                  <input
+                    id="address"
+                    name="address"
+                    type="text"
+                    autocomplete="off"
+                    placeholder="123 Main Street, Marlboro, NJ"
+                    required
+                    aria-autocomplete="list"
+                    aria-controls="address-suggestions"
+                    aria-expanded="false"
+                  />
+
+                  <div
+                    id="address-suggestions"
+                    class="address-suggestions"
+                    role="listbox"
+                    hidden
+                  ></div>
+
+                </div>
+
+                <button
+                  id="submit-button"
+                  type="submit"
+                >
+                  Analyze Property
+                </button>
+
+              </div>
+
+            </div>
+
+            <!-- ====================================================
+                 PROJECT GOAL
+            ===================================================== -->
+
+            <div class="goal-section">
+
+              <div class="goal-heading">
+
+                <label>
+                  What are you planning?
+                </label>
+
+                <span>
+                  Select one
+                </span>
+
+              </div>
+
+              <div class="goal-grid">
+
+                {
+                  projectGoals.map((goal) => (
+
+                    <label class="goal-option">
+
+                      <input
+                        type="radio"
+                        name="projectGoal"
+                        value={goal.value}
+                        checked={goal.value === "buy"}
+                      />
+
+                      <span class="goal-option-label">
+                        {goal.label}
+                      </span>
+
+                    </label>
+
+                  ))
+                }
+
+              </div>
+
+            </div>
+
+            <small class="search-disclaimer">
+              Preliminary intelligence only. Final engineering conclusions
+              require professional review.
+            </small>
+
+          </form>
+
+          <div
+            id="form-status"
+            class="form-status"
+            role="status"
+            aria-live="polite"
+          >
+          </div>
+
+        </div>
+
+
+        <!-- ========================================================
+             REPORT PREVIEW
+        ========================================================= -->
+
+        <div class="hero-report">
+
+          <div class="hero-report-rail">
+
+            <strong>
+              MIDRA<br />
+              ENGINEERING
+            </strong>
+
+            <span>
+              PROPERTY<br />
+              INTELLIGENCE<br />
+              REPORT
+            </span>
+
+            <small>
+              PRELIMINARY PROPERTY ASSESSMENT
+            </small>
+
+          </div>
+
+          <div class="hero-report-body">
+
+            <span class="mini-label">
+              PROPERTY INTELLIGENCE
+            </span>
+
+            <h2>
+              A report built around decisions, not raw data.
+            </h2>
+
+            <div class="hero-score-grid">
+
+              <div>
+                <span>ZONING</span>
+                <b id="hero-zoning">VERIFY</b>
+              </div>
+
+              <div>
+                <span>FLOOD</span>
+                <b id="hero-flood">VERIFY</b>
+              </div>
+
+              <div>
+                <span>WETLANDS</span>
+                <b id="hero-wetlands">VERIFY</b>
+              </div>
+
+              <div>
+                <span>DEVELOPMENT</span>
+                <b id="hero-buildability">VERIFY</b>
+              </div>
+
+            </div>
+
+            <h4>
+              EXECUTIVE FINDING
+            </h4>
+
+            <p id="hero-executive-finding">
+              Preliminary findings are translated into plain English,
+              with clear verification flags and next steps instead of
+              false certainty.
+            </p>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- ==========================================================
+       REPORT STRUCTURE
+  =========================================================== -->
+
+  <section class="pi-report" id="assessment">
+
+    <div class="container">
+
+      <div class="section-head">
+
+        <span class="eyebrow">
+          THE MIDRA REPORT
+        </span>
+
+        <h2>
+          Everything important, organized the way an engineer thinks about a property.
+        </h2>
+
+        <p>
+          The report brings together property information, zoning,
+          environmental constraints, development considerations and
+          recommended next steps in a format designed for real decisions.
+        </p>
+
+      </div>
+
+
+      <div class="report-sections">
+
+        <article>
+
+          <span>01</span>
+
+          <div>
+
+            <h3>
+              Property Overview
+            </h3>
+
+            <p>
+              Address, municipality, county, block/lot, lot area,
+              coordinates and key findings.
+            </p>
+
+          </div>
+
+        </article>
+
+
+        <article>
+
+          <span>02</span>
+
+          <div>
+
+            <h3>
+              Zoning & Development Standards
+            </h3>
+
+            <p>
+              Technical requirements translated into practical
+              implications for the proposed project.
+            </p>
+
+          </div>
+
+        </article>
+
+
+        <article>
+
+          <span>03</span>
+
+          <div>
+
+            <h3>
+              Flood & Environmental Review
+            </h3>
+
+            <p>
+              Mapped constraints are separated from professional
+              verification and field requirements.
+            </p>
+
+          </div>
+
+        </article>
+
+
+        <article>
+
+          <span>04</span>
+
+          <div>
+
+            <h3>
+              What May Be Possible
+            </h3>
+
+            <p>
+              Pool, addition, garage, patio/deck, driveway,
+              subdivision and other improvements with verification needs.
+            </p>
+
+          </div>
+
+        </article>
+
+
+        <article>
+
+          <span>05</span>
+
+          <div>
+
+            <h3>
+              Report Notes & Disclaimer
+            </h3>
+
+            <p>
+              Sources, confidence, automated-vs-professional review
+              and the limits of preliminary analysis.
+            </p>
+
+          </div>
+
+        </article>
+
+      </div>
+
+
+      <!-- ========================================================
+           SAMPLE REPORT
+      ========================================================= -->
+
+      <div class="download-panel">
+
+        <div>
+
+          <span class="mini-label">
+            APPROVED VISUAL EXAMPLE
+          </span>
+
+          <h3>
+            See the complete MIDRA report.
+          </h3>
+
+          <p>
+            The sample report is the visual and structural reference
+            for the production report.
+          </p>
+
+        </div>
+
+        <a
+          href="/reports/MIDRA_Property_Intelligence_Report_Example.pdf"
+          target="_blank"
+          rel="noopener"
+        >
+          Open sample report â†’
+        </a>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- ==========================================================
+       LIVE / PRELIMINARY RESULT
+  =========================================================== -->
+
+  <section
+    class="pi-result"
+    id="result-section"
+    hidden
+  >
+
+    <div class="container">
+
+      <div class="result-shell">
+
+        <div class="result-header">
+
+          <div>
+
+            <span class="eyebrow">
+              PRELIMINARY ASSESSMENT
+            </span>
+
+            <h2 id="result-address">
+              Property
+            </h2>
+
+            <p id="result-message"></p>
+
+            <p
+              id="result-goal"
+              class="result-goal"
+            >
+            </p>
+
+          </div>
+
+          <span
+            id="result-mode"
+            class="mode-badge"
+          >
+            PRELIMINARY
+          </span>
+
+        </div>
+
+
+        <div
+          class="result-grid"
+          id="result-cards"
+        >
+        </div>
+
+
+        <div
+          class="property-detail-panel"
+          id="property-detail-panel"
+          hidden
+        >
+          <div class="detail-panel-head">
+            <span class="mini-label">PROPERTY OVERVIEW</span>
+            <h3>Resolved property information</h3>
+            <p>
+              Information shown here comes from the property-resolution
+              response. Fields are displayed only when the API provides them.
+            </p>
+          </div>
+
+         <div
+  class="property-detail-grid"
+  id="property-detail-grid"
+>
+</div>
+
+<div
+  class="property-map-section"
+  id="property-map-section"
+  hidden
+>
+  <div class="detail-panel-head">
+    <span class="mini-label">GIS / PROPERTY LOCATION</span>
+
+    <h3>Property location and parcel boundary</h3>
+
+    <p>
+      The map identifies the resolved property location and,
+      when available, the authoritative parcel boundary returned
+      by the property-resolution service.
+    </p>
+  </div>
+
+  <div id="property-map-mount"></div>
+</div>
+
+</div>
+
+        <div
+          class="project-requirements-panel"
+          id="project-requirements-panel"
+          hidden
+        >
+          <div class="detail-panel-head">
+            <span class="mini-label">PROJECT-SPECIFIC INTELLIGENCE</span>
+            <h3>Requirements and verification items</h3>
+            <p>
+              These items are shown only when the API provides
+              project-specific requirements or verification information.
+            </p>
+          </div>
+
+          <div
+            class="project-requirements-list"
+            id="project-requirements-list"
+          >
+          </div>
+        </div>
+
+
+        <div
+          class="approval-pathway-panel"
+          id="approval-pathway-panel"
+          hidden
+        >
+          <div class="detail-panel-head">
+            <span class="mini-label">MUNICIPAL APPROVAL PATHWAY</span>
+            <h3>Approval pathway</h3>
+            <p>
+              This pathway is shown only when the API has registered
+              project-specific evidence supporting an approval route.
+              A verification state means the applicable municipal pathway
+              still requires confirmation.
+            </p>
+          </div>
+
+          <div
+            class="approval-pathway-summary"
+            id="approval-pathway-summary"
+          ></div>
+
+          <div
+            class="approval-pathway-details"
+            id="approval-pathway-details"
+          ></div>
+        </div>
+
+
+        <div class="result-next">
+
+          <div>
+
+            <strong>
+              Next step
+            </strong>
+
+            <p id="result-next-text"></p>
+
+          </div>
+
+          <a href="/contact">
+            Request MIDRA Engineering Review â†’
+          </a>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- ==========================================================
+       ENGINEERING REVIEW CTA
+  =========================================================== -->
+
+  <section class="pi-cta">
+
+    <div class="container">
+
+      <div>
+
+        <span class="eyebrow">
+          FROM INTELLIGENCE TO ENGINEERING
+        </span>
+
+        <h2>
+          When the preliminary answer matters, MIDRA Engineering can take it further.
+        </h2>
+
+      </div>
+
+      <a href="/contact">
+        Request Professional Review â†’
+      </a>
+
+    </div>
+
+  </section>
+
+</Layout>
+
+
+<script>
+  const form = document.querySelector("#property-form");
+  import L from "leaflet";
+  import "leaflet/dist/leaflet.css";
+  const status = document.querySelector("#form-status");
+
+  const result = document.querySelector("#result-section");
+  const resultAddress = document.querySelector("#result-address");
+  const resultMessage = document.querySelector("#result-message");
+  const resultGoal = document.querySelector("#result-goal");
+  const resultMode = document.querySelector("#result-mode");
+  const resultCards = document.querySelector("#result-cards");
+  const propertyDetailPanel = document.querySelector("#property-detail-panel");
+  const propertyDetailGrid = document.querySelector("#property-detail-grid");
+  const propertyMapSection =
+  document.querySelector("#property-map-section");
+
+const propertyMapMount =
+  document.querySelector("#property-map-mount");
+  let propertyMapInstance = null;
+  const projectRequirementsPanel = document.querySelector(
+    "#project-requirements-panel"
+  );
+  const projectRequirementsList = document.querySelector(
+    "#project-requirements-list"
+  );
+  const resultNext = document.querySelector("#result-next-text");
+
+  const approvalPathwayPanel = document.querySelector(
+    "#approval-pathway-panel"
+  );
+
+  const approvalPathwaySummary = document.querySelector(
+    "#approval-pathway-summary"
+  );
+
+  const approvalPathwayDetails = document.querySelector(
+    "#approval-pathway-details"
+  );
+
+  const submitButton = document.querySelector("#submit-button");
+
+  const addressInput = document.querySelector("#address");
+  const addressSuggestions =
+    document.querySelector("#address-suggestions");
+
+  const API_BASE =
+    "http://127.0.0.1:8000";
+
+  let suggestionTimer = null;
+  let suggestionAbortController = null;
+  let suggestionItems = [];
+  let activeSuggestionIndex = -1;
+
+  function closeAddressSuggestions() {
+    if (!addressSuggestions || !addressInput) {
+      return;
+    }
+
+    addressSuggestions.hidden = true;
+    addressSuggestions.innerHTML = "";
+    addressInput.setAttribute(
+      "aria-expanded",
+      "false"
+    );
+
+    suggestionItems = [];
+    activeSuggestionIndex = -1;
+  }
+
+  function selectAddressSuggestion(index) {
+    const item = suggestionItems[index];
+
+    if (!item || !addressInput) {
+      return;
+    }
+
+    addressInput.value = item.address || "";
+    closeAddressSuggestions();
+    addressInput.focus();
+  }
+
+  function renderAddressSuggestions(items) {
+    if (!addressSuggestions || !addressInput) {
+      return;
+    }
+
+    suggestionItems = items || [];
+    activeSuggestionIndex = -1;
+
+    if (!suggestionItems.length) {
+      closeAddressSuggestions();
+      return;
+    }
+
+    addressSuggestions.innerHTML = "";
+
+    suggestionItems.forEach((item, index) => {
+      const button =
+        document.createElement("button");
+
+      button.type = "button";
+      button.className =
+        "address-suggestion";
+      button.setAttribute(
+        "role",
+        "option"
+      );
+      button.setAttribute(
+        "aria-selected",
+        "false"
+      );
+
+      const strong =
+        document.createElement("strong");
+
+      strong.textContent =
+        item.address || "";
+
+      const small =
+        document.createElement("small");
+
+      const locationParts = [
+        item.city,
+        item.county,
+        item.state,
+        item.postal_code
+      ].filter(Boolean);
+
+      small.textContent =
+        locationParts.join(", ");
+
+      button.appendChild(strong);
+
+      if (small.textContent) {
+        button.appendChild(small);
+      }
+
+      button.addEventListener(
+        "mousedown",
+        (event) => {
+          event.preventDefault();
+          selectAddressSuggestion(index);
+        }
+      );
+
+      addressSuggestions.appendChild(button);
+    });
+
+    addressSuggestions.hidden = false;
+
+    addressInput.setAttribute(
+      "aria-expanded",
+      "true"
+    );
+  }
+
+  async function fetchAddressSuggestions() {
+    if (!addressInput) {
+      return;
+    }
+
+    const query =
+      addressInput.value.trim();
+
+    if (query.length < 3) {
+      closeAddressSuggestions();
+      return;
+    }
+
+    if (suggestionAbortController) {
+      suggestionAbortController.abort();
+    }
+
+    suggestionAbortController =
+      new AbortController();
+
+    try {
+      const response =
+        await fetch(
+          `${API_BASE}/property-intelligence/suggest?q=${encodeURIComponent(query)}`,
+          {
+            method: "GET",
+            signal:
+              suggestionAbortController.signal
+          }
+        );
+
+      if (!response.ok) {
+        closeAddressSuggestions();
+        return;
+      }
+
+      const data =
+        await response.json();
+
+      renderAddressSuggestions(
+        data.suggestions || []
+      );
+
+    } catch (error) {
+      if (
+        error?.name !==
+        "AbortError"
+      ) {
+        closeAddressSuggestions();
+      }
+    }
+  }
+
+  addressInput?.addEventListener(
+    "input",
+    () => {
+      window.clearTimeout(
+        suggestionTimer
+      );
+
+      suggestionTimer =
+        window.setTimeout(
+          fetchAddressSuggestions,
+          220
+        );
+    }
+  );
+
+  addressInput?.addEventListener(
+    "keydown",
+    (event) => {
+      if (
+        addressSuggestions?.hidden ||
+        !suggestionItems.length
+      ) {
+        return;
+      }
+
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+
+        activeSuggestionIndex =
+          Math.min(
+            activeSuggestionIndex + 1,
+            suggestionItems.length - 1
+          );
+
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+
+        activeSuggestionIndex =
+          Math.max(
+            activeSuggestionIndex - 1,
+            0
+          );
+
+      } else if (event.key === "Enter") {
+        if (
+          activeSuggestionIndex >= 0
+        ) {
+          event.preventDefault();
+          selectAddressSuggestion(
+            activeSuggestionIndex
+          );
+          return;
+        }
+
+        return;
+      } else if (event.key === "Escape") {
+        closeAddressSuggestions();
+        return;
+      } else {
+        return;
+      }
+
+      const buttons =
+        addressSuggestions.querySelectorAll(
+          ".address-suggestion"
+        );
+
+      buttons.forEach(
+        (button, index) => {
+          const active =
+            index ===
+            activeSuggestionIndex;
+
+          button.classList.toggle(
+            "is-active",
+            active
+          );
+
+          button.setAttribute(
+            "aria-selected",
+            String(active)
+          );
+        }
+      );
+    }
+  );
+
+  document.addEventListener(
+    "click",
+    (event) => {
+      if (
+        !addressInput ||
+        !addressSuggestions
+      ) {
+        return;
+      }
+
+      if (
+        event.target === addressInput ||
+        addressSuggestions.contains(
+          event.target
+        )
+      ) {
+        return;
+      }
+
+      closeAddressSuggestions();
+    }
+  );
+
+
+  const heroZoning = document.querySelector("#hero-zoning");
+  const heroFlood = document.querySelector("#hero-flood");
+  const heroWetlands = document.querySelector("#hero-wetlands");
+  const heroBuildability = document.querySelector("#hero-buildability");
+  const heroExecutiveFinding = document.querySelector(
+    "#hero-executive-finding"
+  );
+
+    function renderPropertyMap({
+    latitude,
+    longitude,
+    rings,
+    address,
+    parcelId
+  }) {
+
+    if (
+      !propertyMapSection ||
+      !propertyMapMount
+    ) {
+      return;
+    }
+
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude)
+    ) {
+      propertyMapSection.hidden = true;
+      return;
+    }
+
+    propertyMapSection.hidden = false;
+
+    if (propertyMapInstance) {
+      propertyMapInstance.remove();
+      propertyMapInstance = null;
+    }
+
+    propertyMapMount.innerHTML = "";
+
+    const mapElement =
+      document.createElement("div");
+
+    mapElement.className =
+      "property-map-runtime";
+
+    propertyMapMount.appendChild(
+      mapElement
+    );
+    
+propertyMapInstance =
+  L.map(mapElement, {
+    scrollWheelZoom: true,
+    zoomControl: true,
+    doubleClickZoom: true,
+    touchZoom: true,
+    dragging: true
+  }).setView(
+    [latitude, longitude],
+    17
+  );
+
+    L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        attribution:
+          "&copy; OpenStreetMap contributors",
+        maxZoom: 19
+      }
+    ).addTo(
+      propertyMapInstance
+    );
+
+    const marker =
+      L.marker([
+        latitude,
+        longitude
+      ]).addTo(
+        propertyMapInstance
+      );
+
+    marker.bindPopup(`
+      <div class="midra-map-popup">
+        <strong>MIDRA Property</strong>
+        <span>${address}</span>
+        ${
+          parcelId
+            ? `<br /><small>Parcel: ${parcelId}</small>`
+            : ""
+        }
+      </div>
+    `);
+
+    const validRings =
+      Array.isArray(rings)
+        ? rings.filter(
+            (ring) =>
+              Array.isArray(ring) &&
+              ring.length >= 3
+          )
+        : [];
+
+    if (validRings.length) {
+
+      const polygonCoordinates =
+        validRings.map(
+          (ring) =>
+            ring
+              .filter(
+                (point) =>
+                  Array.isArray(point) &&
+                  point.length >= 2 &&
+                  Number.isFinite(
+                    Number(point[0])
+                  ) &&
+                  Number.isFinite(
+                    Number(point[1])
+                  )
+              )
+              .map(
+                ([lng, lat]) =>
+                  [
+                    Number(lat),
+                    Number(lng)
+                  ]
+              )
+        );
+
+      const parcelPolygon =
+        L.polygon(
+          polygonCoordinates,
+          {
+            weight: 3,
+            fillOpacity: 0.12
+          }
+        ).addTo(
+          propertyMapInstance
+        );
+
+      parcelPolygon.bindPopup(`
+        <div class="midra-map-popup">
+          <strong>Resolved Property Parcel</strong>
+          <span>${address}</span>
+          ${
+            parcelId
+              ? `<br /><small>Parcel: ${parcelId}</small>`
+              : ""
+          }
+        </div>
+      `);
+
+    propertyMapInstance.fitBounds(
+  parcelPolygon.getBounds(),
+  {
+    padding: [45, 45],
+    maxZoom: 16
+  }
+  );
+
+    } else {
+
+      propertyMapInstance.setView(
+        [latitude, longitude],
+        17
+      );
+
+    }
+
+    window.setTimeout(() => {
+      propertyMapInstance?.invalidateSize();
+    }, 100);
+  }
+  const goalLabels = {
+    buy: "Buy Property",
+    pool: "Build a Pool",
+    addition: "Home Addition",
+    garage: "Garage",
+    deck: "Deck / Patio",
+    new_home: "Build a New Home",
+    adu: "Build an ADU",
+    driveway: "Driveway",
+    subdivide: "Subdivide",
+    invest: "Investment",
+    other: "Something Else"
+  };
+
+
+  form?.addEventListener("submit", async (event) => {
+
+    event.preventDefault();
+
+    const input = document.querySelector("#address");
+
+    const address = input?.value.trim();
+
+    const selectedGoal = document.querySelector(
+      'input[name="projectGoal"]:checked'
+    );
+
+    const projectGoal = selectedGoal?.value || "other";
+
+    if (!address) {
+
+      status.textContent =
+        "Please enter a property address.";
+
+      return;
+
+    }
+
+
+    status.textContent =
+      "Analyzing propertyâ€¦";
+
+
+    if (submitButton) {
+
+      submitButton.disabled = true;
+
+      submitButton.textContent =
+        "Analyzingâ€¦";
+
+    }
+
+
+    try {
+
+      const response = await fetch(
+        `${API_BASE}/property-intelligence/analyze`,
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json"
+          },
+
+          body: JSON.stringify({
+            address: address,
+            project_goal: projectGoal
+          })
+        }
+      );
+
+
+      if (!response.ok) {
+
+        throw new Error(
+          "The property intelligence service is unavailable."
+        );
+
+      }
+
+
+      const data = await response.json();
+
+
+      if (!data.property || !data.findings) {
+
+        throw new Error(
+          "The property intelligence response was incomplete."
+        );
+
+      }
+
+
+      const findings = Array.isArray(data.findings)
+        ? data.findings
+        : [];
+
+
+      const getFinding = (...areas) =>
+        findings.find((item) =>
+          areas.some((area) =>
+            String(item.area || "")
+              .toLowerCase()
+              .includes(area)
+          )
+        );
+
+
+      const zoning = getFinding("zoning");
+      const flood = getFinding("flood");
+      const wetlands = getFinding("wetland");
+      const development = getFinding("development");
+
+
+      /* ==========================================================
+         HERO REPORT
+      ========================================================== */
+
+      if (heroZoning) {
+
+        heroZoning.textContent =
+          zoning?.status || "VERIFY";
+
+      }
+
+
+      if (heroFlood) {
+
+        heroFlood.textContent =
+          flood?.status || "VERIFY";
+
+      }
+
+
+      if (heroWetlands) {
+
+        heroWetlands.textContent =
+          wetlands?.status || "VERIFY";
+
+      }
+
+
+      if (heroBuildability) {
+
+        heroBuildability.textContent =
+          development?.status || "VERIFY";
+
+      }
+
+
+      if (heroExecutiveFinding) {
+
+        heroExecutiveFinding.textContent =
+          data.summary ||
+          "Preliminary findings are translated into plain English, with clear verification flags and next steps instead of false certainty.";
+
+      }
+
+
+      /* ==========================================================
+         RESULT HEADER
+      ========================================================== */
+
+      resultAddress.textContent =
+        data.property.address || address;
+
+
+      resultMessage.textContent =
+        data.summary ||
+        "Preliminary assessment completed.";
+
+
+      resultGoal.textContent =
+        data.project?.goal
+          ? `Project goal: ${goalLabels[data.project.goal] || data.project.goal}`
+          : `Project goal: ${goalLabels[projectGoal] || "Something Else"}`;
+
+
+      /*
+       * A successfully resolved property is not "demo data".
+       * The property and parcel came from the NJ statewide
+       * property services and the zoning resolver may have
+       * supplied authoritative municipal evidence.
+       *
+       * Only use the demo label when the API explicitly
+       * indicates that the property was not resolved.
+       */
+
+      resultMode.textContent =
+        "PRELIMINARY";
+
+
+      /* ==========================================================
+         RESULT CARDS
+      ========================================================== */
+
+      resultCards.innerHTML = "";
+
+
+      findings.forEach((item) => {
+
+        const card =
+          document.createElement("article");
+
+        card.className =
+          "result-card";
+
+
+        const area =
+          document.createElement("span");
+
+        area.textContent =
+          item.area || "";
+
+
+        const statusValue =
+          document.createElement("strong");
+
+        statusValue.textContent =
+          item.status || "";
+
+
+        const meaning =
+          document.createElement("p");
+
+        meaning.textContent =
+          item.meaning || "";
+
+
+        card.append(
+          area,
+          statusValue,
+          meaning
+        );
+
+
+        resultCards.appendChild(card);
+
+      });
+
+
+      /* ==========================================================
+         PROPERTY OVERVIEW
+      ========================================================== */
+
+      const property =
+        data.property || {};
+
+      const propertyResolution =
+        data.property_resolution || {};
+
+      const parcel =
+        property.parcel ||
+        propertyResolution.parcel ||
+        data.parcel ||
+        {};
+
+      const coordinates =
+        propertyResolution.coordinates ||
+        property.coordinates ||
+        data.coordinates ||
+        {};
+
+        const parcelGeometry =
+  parcel.geometry || {};
+
+const mapLatitude =
+  Number(coordinates.latitude);
+
+const mapLongitude =
+  Number(coordinates.longitude);
+
+const mapAddress =
+  property.address ||
+  propertyResolution.matched_address ||
+  address;
+
+const mapParcelId =
+  parcel.pams_pin ||
+  parcel.gis_pin ||
+  "";
+renderPropertyMap({
+  latitude: mapLatitude,
+  longitude: mapLongitude,
+  rings: parcelGeometry.rings || [],
+  address: mapAddress,
+  parcelId: mapParcelId
+});
+
+
+      const propertyFields = [
+        ["Address", property.address || propertyResolution.matched_address || address],
+        ["Municipality", parcel.municipality || property.municipality || propertyResolution.municipality],
+        ["County", parcel.county || property.county || propertyResolution.county],
+        ["State", parcel.state || property.state || propertyResolution.state],
+        ["Block", parcel.block],
+        ["Lot", parcel.lot],
+        ["PAMS PIN", parcel.pams_pin || parcel.pams_pin_no],
+        ["GIS PIN", parcel.gis_pin],
+        ["Property class", parcel.property_class],
+        ["Acreage", parcel.acreage],
+        ["Property use", parcel.property_use],
+        ["Building description", parcel.building_description],
+        ["ZIP", parcel.zip5 || parcel.zip_code],
+        ["Latitude", coordinates.latitude],
+        ["Longitude", coordinates.longitude]
+      ];
+
+
+      const availablePropertyFields =
+        propertyFields.filter(([, value]) =>
+          value !== undefined &&
+          value !== null &&
+          String(value).trim() !== ""
+        );
+
+
+      propertyDetailGrid.innerHTML = "";
+
+
+      if (availablePropertyFields.length) {
+
+        availablePropertyFields.forEach(([label, value]) => {
+
+          const item =
+            document.createElement("div");
+
+          item.className =
+            "property-detail-item";
+
+
+          const itemLabel =
+            document.createElement("span");
+
+          itemLabel.textContent =
+            label;
+
+
+          const itemValue =
+            document.createElement("strong");
+
+          itemValue.textContent =
+            String(value);
+
+
+          item.append(
+            itemLabel,
+            itemValue
+          );
+
+
+          propertyDetailGrid.appendChild(item);
+
+        });
+
+
+        propertyDetailPanel.hidden =
+          false;
+
+      } else {
+
+        propertyDetailPanel.hidden =
+          true;
+
+      }
+
+
+      /* ==========================================================
+         PROJECT-SPECIFIC REQUIREMENTS
+      ========================================================== */
+
+      const zoningData =
+        data.zoning_intelligence ||
+        data.zoning ||
+        data.property_zoning ||
+        data.zoning_resolution ||
+        {};
+
+      const resolvedZoning =
+        data.property_zoning ||
+        data.zoning_resolution ||
+        {};
+
+      const zoningName =
+        zoningData.zoning_name ||
+        resolvedZoning.zoning_name ||
+        zoning?.zoning_name ||
+        "";
+
+      const zoningSource =
+        zoningData.source ||
+        resolvedZoning.source ||
+        zoningData.zoning_map_source ||
+        resolvedZoning.zoning_map_source ||
+        zoning?.source ||
+        null;
+
+      const zoningConfidence =
+        zoningData.confidence ||
+        resolvedZoning.confidence ||
+        "";
+
+      const zoningSourceSection =
+        zoningData.source_section ||
+        resolvedZoning.source_section ||
+        "";
+
+      const zoningParcelEvidence =
+        zoningData.parcel_evidence ||
+        resolvedZoning.parcel_evidence ||
+        null;
+
+      const requirementCandidates = [
+        ...(Array.isArray(zoningData.project_requirements)
+          ? zoningData.project_requirements
+          : []),
+        ...(Array.isArray(resolvedZoning.project_requirements)
+          ? resolvedZoning.project_requirements
+          : []),
+        ...(Array.isArray(zoningData.bulk_requirements)
+          ? zoningData.bulk_requirements
+          : []),
+        ...(Array.isArray(resolvedZoning.bulk_requirements)
+          ? resolvedZoning.bulk_requirements
+          : []),
+        ...(Array.isArray(data.project_requirements)
+          ? data.project_requirements
+          : [])
+      ];
+
+      /*
+       * The API exposes one canonical, merged verification_items list.
+       * Render that list once instead of concatenating verification items
+       * from multiple nested zoning layers.
+       */
+      const rawVerificationCandidates =
+        Array.isArray(data.verification_items)
+          ? data.verification_items
+          : [
+              ...(Array.isArray(zoningData.verification_items)
+                ? zoningData.verification_items
+                : []),
+              ...(Array.isArray(resolvedZoning.verification_items)
+                ? resolvedZoning.verification_items
+                : [])
+            ];
+
+      const verificationCandidates = [];
+      const verificationKeys = new Set();
+
+      rawVerificationCandidates.forEach((item) => {
+        const value =
+          typeof item === "string"
+            ? item
+            : item?.meaning ||
+              item?.description ||
+              item?.value ||
+              "";
+
+        const normalizedValue = String(value).trim();
+
+        if (!normalizedValue) {
+          return;
+        }
+
+        const key =
+          normalizedValue
+            .toLowerCase()
+            .replace(/\s+/g, " ");
+
+        if (verificationKeys.has(key)) {
+          return;
+        }
+
+        verificationKeys.add(key);
+        verificationCandidates.push(normalizedValue);
+      });
+
+      /*
+       * Project requirements can also arrive through compatibility
+       * layers. Track rendered requirements so they appear once.
+       */
+      const renderedRequirementKeys = new Set();
+
+      projectRequirementsList.innerHTML = "";
+
+      if (zoningName || zoning?.status || zoningData.zoning_district) {
+
+        const zoningItem =
+          document.createElement("article");
+
+        zoningItem.className =
+          "requirement-item";
+
+        const zoningLabel =
+          document.createElement("span");
+
+        zoningLabel.textContent =
+          "Property-specific zoning";
+
+        const zoningValue =
+          document.createElement("strong");
+
+        const district =
+          zoningData.zoning_district ||
+          resolvedZoning.zoning_district ||
+          zoning?.status ||
+          "VERIFY";
+
+        zoningValue.textContent =
+          zoningName
+            ? `${district} â€” ${zoningName}`
+            : district;
+
+        zoningItem.append(
+          zoningLabel,
+          zoningValue
+        );
+
+        projectRequirementsList.appendChild(
+          zoningItem
+        );
+
+      }
+
+      if (zoningConfidence) {
+
+        const confidenceItem =
+          document.createElement("article");
+
+        confidenceItem.className =
+          "requirement-item";
+
+        const confidenceLabel =
+          document.createElement("span");
+
+        confidenceLabel.textContent =
+          "Zoning confidence";
+
+        const confidenceValue =
+          document.createElement("strong");
+
+        confidenceValue.textContent =
+          zoningConfidence;
+
+        confidenceItem.append(
+          confidenceLabel,
+          confidenceValue
+        );
+
+        projectRequirementsList.appendChild(
+          confidenceItem
+        );
+
+      }
+
+      if (zoningSourceSection) {
+
+        const sectionItem =
+          document.createElement("article");
+
+        sectionItem.className =
+          "requirement-item";
+
+        const sectionLabel =
+          document.createElement("span");
+
+        sectionLabel.textContent =
+          "Source section";
+
+        const sectionValue =
+          document.createElement("strong");
+
+        sectionValue.textContent =
+          zoningSourceSection;
+
+        sectionItem.append(
+          sectionLabel,
+          sectionValue
+        );
+
+        projectRequirementsList.appendChild(
+          sectionItem
+        );
+
+      }
+
+      if (zoningParcelEvidence &&
+          typeof zoningParcelEvidence === "object") {
+
+        Object.entries(zoningParcelEvidence).forEach(
+          ([label, value]) => {
+
+            if (
+              value === undefined ||
+              value === null ||
+              String(value).trim() === ""
+            ) {
+              return;
+            }
+
+            const evidenceItem =
+              document.createElement("article");
+
+            evidenceItem.className =
+              "requirement-item";
+
+            const evidenceLabel =
+              document.createElement("span");
+
+            evidenceLabel.textContent =
+              `Parcel evidence â€” ${label.replaceAll("_", " ")}`;
+
+            const evidenceValue =
+              document.createElement("strong");
+
+            evidenceValue.textContent =
+              String(value);
+
+            evidenceItem.append(
+              evidenceLabel,
+              evidenceValue
+            );
+
+            projectRequirementsList.appendChild(
+              evidenceItem
+            );
+
+          }
+        );
+
+      }
+
+      requirementCandidates.forEach((item) => {
+
+        const requirement =
+          typeof item === "string"
+            ? {
+                requirement: "Requirement",
+                value: item
+              }
+            : item || {};
+
+        if (
+          !requirement.requirement &&
+          !requirement.title &&
+          !requirement.name &&
+          !requirement.value &&
+          !requirement.meaning &&
+          !requirement.description
+        ) {
+          return;
+        }
+
+        const requirementKey = [
+          requirement.requirement ||
+          requirement.title ||
+          requirement.name ||
+          "Requirement",
+          requirement.value ||
+          requirement.meaning ||
+          requirement.description ||
+          ""
+        ]
+          .join("|")
+          .toLowerCase()
+          .replace(/\s+/g, " ")
+          .trim();
+
+        if (renderedRequirementKeys.has(requirementKey)) {
+          return;
+        }
+
+        renderedRequirementKeys.add(requirementKey);
+
+        const requirementItem =
+          document.createElement("article");
+
+        requirementItem.className =
+          "requirement-item";
+
+        const requirementLabel =
+          document.createElement("span");
+
+        requirementLabel.textContent =
+          requirement.requirement ||
+          requirement.title ||
+          requirement.name ||
+          "Requirement";
+
+        const requirementValue =
+          document.createElement("strong");
+
+        requirementValue.textContent =
+          requirement.value ||
+          requirement.meaning ||
+          requirement.description ||
+          "";
+
+        requirementItem.append(
+          requirementLabel,
+          requirementValue
+        );
+
+        if (
+          requirement.source_section ||
+          requirement.source_url
+        ) {
+
+          const source =
+            document.createElement("small");
+
+          const sourceParts = [];
+
+          if (requirement.source_section) {
+            sourceParts.push(
+              requirement.source_section
+            );
+          }
+
+          if (requirement.source_url) {
+            sourceParts.push(
+              requirement.source_url
+            );
+          }
+
+          source.textContent =
+            sourceParts.join(" Â· ");
+
+          requirementItem.appendChild(
+            source
+          );
+
+        }
+
+        projectRequirementsList.appendChild(
+          requirementItem
+        );
+
+      });
+
+      verificationCandidates.forEach((item) => {
+
+        const verificationItem =
+          document.createElement("article");
+
+        verificationItem.className =
+          "requirement-item";
+
+        const verificationLabel =
+          document.createElement("span");
+
+        verificationLabel.textContent =
+          "Verification";
+
+        const verificationValue =
+          document.createElement("strong");
+
+        verificationValue.textContent =
+          String(item);
+
+        verificationItem.append(
+          verificationLabel,
+          verificationValue
+        );
+
+        projectRequirementsList.appendChild(
+          verificationItem
+        );
+
+      });
+
+      if (zoningSource) {
+
+        const sourceItem =
+          document.createElement("article");
+
+        sourceItem.className =
+          "requirement-item";
+
+        const sourceLabel =
+          document.createElement("span");
+
+        sourceLabel.textContent =
+          "Authoritative source";
+
+        const sourceValue =
+          document.createElement("strong");
+
+        if (typeof zoningSource === "string") {
+
+          sourceValue.textContent =
+            zoningSource;
+
+        } else {
+
+          sourceValue.textContent =
+            zoningSource.description ||
+            zoningSource.source_type ||
+            zoningSource.url ||
+            "Source provided by the zoning resolver.";
+
+        }
+
+        sourceItem.append(
+          sourceLabel,
+          sourceValue
+        );
+
+        if (
+          typeof zoningSource === "object" &&
+          zoningSource.url
+        ) {
+
+          const sourceLink =
+            document.createElement("a");
+
+          sourceLink.href =
+            zoningSource.url;
+
+          sourceLink.target =
+            "_blank";
+
+          sourceLink.rel =
+            "noopener noreferrer";
+
+          sourceLink.textContent =
+            "Open source";
+
+          sourceLink.style.display =
+            "inline-block";
+
+          sourceLink.style.marginTop =
+            "8px";
+
+          sourceItem.appendChild(
+            sourceLink
+          );
+
+        }
+
+        projectRequirementsList.appendChild(
+          sourceItem
+        );
+
+      }
+
+      projectRequirementsPanel.hidden =
+        projectRequirementsList.children.length === 0;
+
+
+      /* ==========================================================
+         APPROVAL PATHWAY
+      ========================================================== */
+
+      const approvalPathway =
+        zoningData.approval_pathway ||
+        data.approval_pathway ||
+        null;
+
+      if (
+        approvalPathway &&
+        approvalPathwayPanel &&
+        approvalPathwaySummary &&
+        approvalPathwayDetails
+      ) {
+        approvalPathwaySummary.innerHTML = "";
+        approvalPathwayDetails.innerHTML = "";
+
+        const status = String(
+          approvalPathway.status || "VERIFY"
+        );
+
+        const primaryPathway =
+          approvalPathway.primary_pathway || null;
+
+        const possibleAlternative =
+          approvalPathway.possible_alternative || null;
+
+        const reviewingBodies =
+          Array.isArray(approvalPathway.reviewing_bodies)
+            ? approvalPathway.reviewing_bodies
+            : [];
+
+        const verificationItems =
+          Array.isArray(approvalPathway.verification_items)
+            ? approvalPathway.verification_items
+            : [];
+
+        const source =
+          approvalPathway.source || null;
+
+        const statusItem =
+          document.createElement("div");
+
+        statusItem.className =
+          "approval-pathway-item";
+
+        statusItem.innerHTML =
+          `<span>STATUS</span><strong>${status}</strong>`;
+
+        approvalPathwaySummary.appendChild(
+          statusItem
+        );
+
+        const primaryItem =
+          document.createElement("div");
+
+        primaryItem.className =
+          "approval-pathway-item";
+
+        primaryItem.innerHTML =
+          `<span>PRIMARY PATHWAY</span><strong>${
+            primaryPathway || "Verification required"
+          }</strong>`;
+
+        approvalPathwaySummary.appendChild(
+          primaryItem
+        );
+
+        if (possibleAlternative) {
+          const alternativeItem =
+            document.createElement("div");
+
+          alternativeItem.className =
+            "approval-pathway-item";
+
+          alternativeItem.innerHTML =
+            `<span>POSSIBLE ALTERNATIVE</span><strong>${possibleAlternative}</strong>`;
+
+          approvalPathwaySummary.appendChild(
+            alternativeItem
+          );
+        }
+
+        if (reviewingBodies.length > 0) {
+          const bodyItem =
+            document.createElement("div");
+
+          bodyItem.className =
+            "approval-pathway-item";
+
+          bodyItem.innerHTML =
+            `<span>REVIEWING BODIES</span><strong>${reviewingBodies.join(
+              ", "
+            )}</strong>`;
+
+          approvalPathwaySummary.appendChild(
+            bodyItem
+          );
+        }
+
+        if (verificationItems.length > 0) {
+          const verificationBlock =
+            document.createElement("div");
+
+          verificationBlock.className =
+            "approval-pathway-verification";
+
+          const label =
+            document.createElement("span");
+
+          label.textContent =
+            "VERIFICATION ITEMS";
+
+          verificationBlock.appendChild(
+            label
+          );
+
+          verificationItems.forEach((item) => {
+            const row =
+              document.createElement("p");
+
+            row.textContent =
+              String(item);
+
+            verificationBlock.appendChild(
+              row
+            );
+          });
+
+          approvalPathwayDetails.appendChild(
+            verificationBlock
+          );
+        }
+
+        if (source && source.source) {
+          const sourceBlock =
+            document.createElement("div");
+
+          sourceBlock.className =
+            "approval-pathway-source";
+
+          const sourceLabel =
+            document.createElement("span");
+
+          sourceLabel.textContent =
+            "AUTHORITATIVE SOURCE";
+
+          sourceBlock.appendChild(
+            sourceLabel
+          );
+
+          const sourceName =
+            document.createElement("strong");
+
+          sourceName.textContent =
+            String(source.source);
+
+          sourceBlock.appendChild(
+            sourceName
+          );
+
+          if (source.source_url) {
+            const sourceLink =
+              document.createElement("a");
+
+            sourceLink.href =
+              source.source_url;
+
+            sourceLink.target =
+              "_blank";
+
+            sourceLink.rel =
+              "noopener noreferrer";
+
+            sourceLink.textContent =
+              "Open source";
+
+            sourceBlock.appendChild(
+              sourceLink
+            );
+          }
+
+          approvalPathwayDetails.appendChild(
+            sourceBlock
+          );
+        }
+
+        approvalPathwayPanel.hidden =
+          false;
+      } else if (approvalPathwayPanel) {
+        approvalPathwayPanel.hidden =
+          true;
+      }
+
+
+      /* ==========================================================
+         NEXT STEP
+      ========================================================== */
+
+      resultNext.textContent =
+        data.next_step ||
+        "Review the preliminary findings and determine whether professional engineering review is appropriate.";
+
+
+      result.hidden =
+        false;
+
+
+      result.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+
+
+      status.textContent =
+        "Preliminary assessment ready.";
+
+
+    } catch (error) {
+
+      console.error(error);
+
+      status.textContent =
+        "The MIDRA API is not available right now. Start the API service and try again.";
+
+    } finally {
+
+      if (submitButton) {
+
+        submitButton.disabled = false;
+
+        submitButton.textContent =
+          "Analyze Property";
+
+      }
+
+    }
+
+  });
+</script>
+
+
+<style>
+
+/* ==========================================================
+   PROPERTY INTELLIGENCE HERO
+========================================================== */
+
+.pi-hero {
+
+  padding: 96px 0 84px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #f9fbfc 0%,
+      #eef3f7 100%
+    );
+
+  border-bottom: 1px solid #dce3e9;
+
+}
+
+.pi-hero-grid {
+
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 70px;
+
+  align-items: center;
+
+}
+
+.pi-hero-copy {
+
+  min-width: 0;
+
+}
+
+.eyebrow {
+
+  display: inline-block;
+
+  padding: 9px 16px;
+
+  border-radius: 999px;
+
+  background: #ffffff;
+
+  border: 1px solid #d8e0e7;
+
+  color: #0e3a5d;
+
+  font-size: .73rem;
+
+  font-weight: 800;
+
+  letter-spacing: .16em;
+
+}
+
+.pi-hero h1 {
+
+  margin: 22px 0 20px;
+
+  color: #0b2337;
+
+  font-size: clamp(3rem, 5vw, 5.2rem);
+
+  line-height: 1.01;
+
+  letter-spacing: -.045em;
+
+}
+
+.pi-intro {
+
+  max-width: 640px;
+
+  color: #5e6b78;
+
+  font-size: 1.08rem;
+
+  line-height: 1.85;
+
+}
+
+
+/* ==========================================================
+   SEARCH CARD
+========================================================== */
+
+.search-card {
+
+  margin-top: 30px;
+
+  padding: 24px;
+
+  background: #ffffff;
+
+  border: 1px solid #d9e1e8;
+
+  box-shadow:
+    0 20px 55px rgba(8,41,94,.08);
+
+}
+
+.form-section label,
+.goal-heading label {
+
+  display: block;
+
+  color: #0b2337;
+
+  font-size: .84rem;
+
+  font-weight: 800;
+
+}
+
+.address-autocomplete {
+
+  position: relative;
+
+  min-width: 0;
+
+}
+
+
+.address-suggestions {
+
+  position: absolute;
+
+  z-index: 1200;
+
+  top: calc(100% + 4px);
+
+  left: 0;
+
+  right: 0;
+
+  max-height: 320px;
+
+  overflow-y: auto;
+
+  background: #ffffff;
+
+  border: 1px solid #cfd8e0;
+
+  box-shadow: 0 18px 40px rgba(8,41,94,.14);
+
+}
+
+
+.address-suggestion {
+
+  display: block;
+
+  width: 100%;
+
+  padding: 13px 15px;
+
+  border: 0;
+
+  border-bottom: 1px solid #e7edf2;
+
+  background: #ffffff;
+
+  color: #102c43;
+
+  text-align: left;
+
+  font: inherit;
+
+  cursor: pointer;
+
+}
+
+
+.address-suggestion:last-child {
+
+  border-bottom: 0;
+
+}
+
+
+.address-suggestion:hover,
+
+.address-suggestion.is-active {
+
+  background: #f1f6f9;
+
+}
+
+
+.address-suggestion strong {
+
+  display: block;
+
+  font-size: .88rem;
+
+  line-height: 1.35;
+
+}
+
+
+.address-suggestion small {
+
+  display: block;
+
+  margin-top: 3px;
+
+  color: #74818d;
+
+  font-size: .72rem;
+
+  line-height: 1.35;
+
+}
+
+
+.search-row {
+
+  display: grid;
+
+  grid-template-columns: 1fr auto;
+
+  gap: 10px;
+
+  margin-top: 10px;
+
+}
+
+.search-row input {
+
+  min-width: 0;
+
+  padding: 16px 17px;
+
+  border: 1px solid #cfd8e0;
+
+  color: #102c43;
+
+  background: #ffffff;
+
+  font: inherit;
+
+}
+
+.search-row input:focus {
+
+  outline: none;
+
+  border-color: #0e5c8d;
+
+  box-shadow:
+    0 0 0 3px rgba(14,92,141,.10);
+
+}
+
+.search-row button {
+
+  padding: 16px 22px;
+
+  border: 0;
+
+  background: #0b2337;
+
+  color: #ffffff;
+
+  font: inherit;
+
+  font-weight: 800;
+
+  cursor: pointer;
+
+  transition:
+    background .2s ease,
+    opacity .2s ease;
+
+}
+
+.search-row button:hover {
+
+  background: #0e5c8d;
+
+}
+
+.search-row button:disabled {
+
+  opacity: .6;
+
+  cursor: wait;
+
+}
+
+
+/* ==========================================================
+   PROJECT GOALS
+========================================================== */
+
+.goal-section {
+
+  margin-top: 26px;
+
+  padding-top: 22px;
+
+  border-top: 1px solid #e1e7ec;
+
+}
+
+.goal-heading {
+
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: baseline;
+
+  gap: 20px;
+
+  margin-bottom: 12px;
+
+}
+
+.goal-heading span {
+
+  color: #8a96a1;
+
+  font-size: .72rem;
+
+  font-weight: 700;
+
+  letter-spacing: .08em;
+
+  text-transform: uppercase;
+
+}
+
+.goal-grid {
+
+  display: grid;
+
+  grid-template-columns: repeat(3, 1fr);
+
+  gap: 8px;
+
+}
+
+.goal-option {
+
+  position: relative;
+
+  cursor: pointer;
+
+}
+
+.goal-option input {
+
+  position: absolute;
+
+  opacity: 0;
+
+  pointer-events: none;
+
+}
+
+.goal-option-label {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  min-height: 44px;
+
+  padding: 9px 10px;
+
+  background: #f5f7f9;
+
+  border: 1px solid #d9e1e8;
+
+  color: #344054;
+
+  text-align: center;
+
+  font-size: .79rem;
+
+  font-weight: 700;
+
+  transition:
+    background .18s ease,
+    border-color .18s ease,
+    color .18s ease;
+
+}
+
+.goal-option:hover .goal-option-label {
+
+  border-color: #0e5c8d;
+
+  color: #0e5c8d;
+
+}
+
+.goal-option input:checked + .goal-option-label {
+
+  background: #0b2337;
+
+  border-color: #0b2337;
+
+  color: #ffffff;
+
+}
+
+.goal-option input:focus-visible + .goal-option-label {
+
+  outline: 2px solid #0e5c8d;
+
+  outline-offset: 2px;
+
+}
+
+.search-disclaimer {
+
+  display: block;
+
+  margin-top: 14px;
+
+  color: #788591;
+
+  line-height: 1.5;
+
+}
+
+.form-status {
+
+  min-height: 24px;
+
+  margin-top: 12px;
+
+  color: #0e5c8d;
+
+  font-weight: 700;
+
+}
+
+
+/* ==========================================================
+   REPORT PREVIEW
+========================================================== */
+
+.hero-report {
+
+  display: grid;
+
+  grid-template-columns: 170px 1fr;
+
+  background: #ffffff;
+
+  border: 1px solid #d3dce4;
+
+  box-shadow:
+    0 28px 70px rgba(8,41,94,.12);
+
+}
+
+.hero-report-rail {
+
+  background: #0b2337;
+
+  color: #ffffff;
+
+  padding: 26px 20px;
+
+  min-height: 450px;
+
+  display: flex;
+
+  flex-direction: column;
+
+}
+
+.hero-report-rail strong {
+
+  font-size: .9rem;
+
+  line-height: 1.1;
+
+}
+
+.hero-report-rail span {
+
+  margin-top: auto;
+
+  font-size: 1.65rem;
+
+  line-height: 1.03;
+
+  font-weight: 800;
+
+}
+
+.hero-report-rail small {
+
+  margin-top: 20px;
+
+  color: #64b8e5;
+
+  font-size: .62rem;
+
+  font-weight: 800;
+
+  line-height: 1.45;
+
+}
+
+.hero-report-body {
+
+  padding: 34px;
+
+}
+
+.mini-label {
+
+  color: #0e5c8d;
+
+  font-size: .69rem;
+
+  font-weight: 800;
+
+  letter-spacing: .13em;
+
+}
+
+.hero-report-body h2 {
+
+  margin: 10px 0 24px;
+
+  color: #102c43;
+
+  font-size: 2rem;
+
+  line-height: 1.1;
+
+}
+
+.hero-score-grid {
+
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 10px;
+
+  margin-bottom: 28px;
+
+}
+
+.hero-score-grid div {
+
+  padding: 15px;
+
+  background: #f1f4f7;
+
+  border: 1px solid #d8e0e7;
+
+  text-align: center;
+
+}
+
+.hero-score-grid span {
+
+  display: block;
+
+  color: #7b8792;
+
+  font-size: .6rem;
+
+  font-weight: 800;
+
+  letter-spacing: .1em;
+
+  margin-bottom: 7px;
+
+}
+
+.hero-score-grid b {
+
+  color: #102c43;
+
+  font-size: 1rem;
+
+}
+
+.hero-report-body h4 {
+
+  color: #102c43;
+
+  margin: 0 0 8px;
+
+  font-size: .9rem;
+
+}
+
+.hero-report-body p {
+
+  color: #5b6875;
+
+  line-height: 1.75;
+
+  margin: 0;
+
+}
+
+
+/* ==========================================================
+   REPORT STRUCTURE
+========================================================== */
+
+.pi-report {
+
+  padding: 120px 0;
+
+  background: #ffffff;
+
+}
+
+.section-head {
+
+  max-width: 850px;
+
+  margin: 0 auto 55px;
+
+  text-align: center;
+
+}
+
+.section-head h2 {
+
+  margin: 18px 0;
+
+  color: #102c43;
+
+  font-size: clamp(2.3rem, 4.5vw, 3.7rem);
+
+  line-height: 1.08;
+
+  letter-spacing: -.035em;
+
+}
+
+.section-head p {
+
+  color: #65717d;
+
+  line-height: 1.8;
+
+  font-size: 1.05rem;
+
+}
+
+.report-sections {
+
+  max-width: 1050px;
+
+  margin: auto;
+
+  border-top: 1px solid #d9e1e8;
+
+}
+
+.report-sections article {
+
+  display: grid;
+
+  grid-template-columns: 90px 1fr;
+
+  gap: 24px;
+
+  padding: 28px 0;
+
+  border-bottom: 1px solid #d9e1e8;
+
+}
+
+.report-sections article > span {
+
+  font-size: 1.1rem;
+
+  font-weight: 900;
+
+  color: #0e5c8d;
+
+}
+
+.report-sections h3 {
+
+  margin: 0 0 7px;
+
+  color: #102c43;
+
+  font-size: 1.35rem;
+
+}
+
+.report-sections p {
+
+  margin: 0;
+
+  color: #65717d;
+
+  line-height: 1.7;
+
+}
+
+
+/* ==========================================================
+   SAMPLE REPORT
+========================================================== */
+
+.download-panel {
+
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  gap: 30px;
+
+  margin: 55px auto 0;
+
+  max-width: 1050px;
+
+  padding: 30px;
+
+  background: #eef3f7;
+
+  border: 1px solid #d5dde5;
+
+}
+
+.download-panel h3 {
+
+  margin: 8px 0;
+
+  color: #102c43;
+
+  font-size: 1.5rem;
+
+}
+
+.download-panel p {
+
+  margin: 0;
+
+  color: #66737f;
+
+}
+
+.download-panel a,
+.pi-cta a,
+.result-next a {
+
+  color: #0e5c8d;
+
+  font-weight: 800;
+
+  text-decoration: none;
+
+  white-space: nowrap;
+
+}
+
+
+/* ==========================================================
+   PROPERTY DETAILS
+========================================================== */
+
+.property-detail-panel,
+.project-requirements-panel {
+
+  margin-top: 18px;
+
+  padding: 28px;
+
+  background: #ffffff;
+
+  border: 1px solid #d7dfe7;
+
+}
+
+.detail-panel-head {
+
+  margin-bottom: 20px;
+
+}
+
+.detail-panel-head h3 {
+
+  margin: 7px 0;
+
+  color: #102c43;
+
+  font-size: 1.35rem;
+
+}
+
+.detail-panel-head p {
+
+  margin: 0;
+
+  color: #65717d;
+
+  line-height: 1.65;
+
+  max-width: 800px;
+
+}
+
+.property-detail-grid {
+
+  display: grid;
+
+  grid-template-columns: repeat(4, 1fr);
+
+  gap: 10px;
+
+}
+
+/* ==========================================================
+   PROPERTY MAP
+========================================================== */
+
+:global(.property-map-section) {
+  margin-top: 20px;
+}
+
+:global(.property-map-runtime) {
+  width: 100%;
+  height: 500px;
+  min-height: 500px;
+  border: 1px solid #d7dfe7;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #eef3f7;
+}
+
+:global(.property-map-runtime.leaflet-container) {
+  width: 100%;
+  height: 500px;
+  min-height: 500px;
+}
+
+
+:global(.property-detail-item) {
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 7px;
+
+  padding: 14px;
+
+  background: #f5f7fa;
+
+  border: 1px solid #dbe2e8;
+
+}
+
+:global(.property-detail-item span),
+:global(.requirement-item span) {
+
+  display: block;
+
+  color: #74818d;
+
+  font-size: .64rem;
+
+  font-weight: 800;
+
+  letter-spacing: .09em;
+
+  line-height: 1.3;
+
+  text-transform: uppercase;
+
+}
+
+:global(.property-detail-item strong) {
+
+  display: block;
+
+  margin: 0;
+
+  color: #102c43;
+
+  font-size: .92rem;
+
+  line-height: 1.4;
+
+  overflow-wrap: anywhere;
+
+}
+
+:global(.project-requirements-list) {
+
+  display: grid;
+
+  gap: 10px;
+
+}
+
+:global(.requirement-item) {
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 7px;
+
+  padding: 16px;
+
+  background: #f5f7fa;
+
+  border: 1px solid #dbe2e8;
+
+}
+
+:global(.requirement-item strong) {
+
+  display: block;
+
+  margin: 0;
+
+  color: #102c43;
+
+  font-size: .94rem;
+
+  line-height: 1.55;
+
+  overflow-wrap: anywhere;
+
+}
+
+:global(.requirement-item small) {
+
+  display: block;
+
+  margin-top: 2px;
+
+  color: #7b8792;
+
+  line-height: 1.45;
+
+  overflow-wrap: anywhere;
+
+}
+
+:global(.requirement-item a) {
+
+  color: #0e5c8d;
+
+  font-size: .78rem;
+
+  font-weight: 800;
+
+  text-decoration: none;
+
+}
+
+:global(.requirement-item a:hover) {
+
+  text-decoration: underline;
+
+}
+
+.requirement-item a:hover {
+
+  text-decoration: underline;
+
+}
+
+
+/* ==========================================================
+   RESULT
+========================================================== */
+
+.pi-result {
+
+  padding: 0 0 110px;
+
+  background: #ffffff;
+
+}
+
+.result-shell {
+
+  background: #f5f7fa;
+
+  border: 1px solid #d5dde5;
+
+  padding: 44px;
+
+}
+
+.result-header {
+
+  display: flex;
+
+  justify-content: space-between;
+
+  gap: 30px;
+
+  align-items: flex-start;
+
+  border-bottom: 1px solid #d5dde5;
+
+  padding-bottom: 28px;
+
+}
+
+.result-header h2 {
+
+  margin: 14px 0 8px;
+
+  color: #102c43;
+
+  font-size: 2.5rem;
+
+}
+
+.result-header p {
+
+  margin: 0;
+
+  color: #5f6c78;
+
+  line-height: 1.7;
+
+}
+
+.result-goal {
+
+  margin-top: 8px !important;
+
+  color: #0e5c8d !important;
+
+  font-size: .9rem;
+
+  font-weight: 700;
+
+}
+
+.mode-badge {
+
+  padding: 9px 12px;
+
+  background: #fff3d8;
+
+  color: #8a641d;
+
+  border: 1px solid #ead6a3;
+
+  font-size: .68rem;
+
+  font-weight: 900;
+
+  letter-spacing: .1em;
+
+}
+
+.result-grid {
+
+  display: grid;
+
+  grid-template-columns: repeat(4, 1fr);
+
+  gap: 14px;
+
+  padding: 30px 0;
+
+}
+
+:global(.result-card) {
+
+  background: #ffffff;
+
+  border: 1px solid #d7dfe7;
+
+  padding: 20px;
+
+}
+
+:global(.result-card span) {
+
+  display: block;
+
+  color: #74818d;
+
+  font-size: .66rem;
+
+  font-weight: 800;
+
+  letter-spacing: .11em;
+
+  line-height: 1.3;
+
+}
+
+:global(.result-card strong) {
+
+  display: block;
+
+  margin: 8px 0;
+
+  color: #102c43;
+
+  font-size: 1.25rem;
+
+  line-height: 1.2;
+
+}
+
+:global(.result-card p) {
+
+  margin: 0;
+
+  color: #65717d;
+
+  line-height: 1.6;
+
+  font-size: .93rem;
+
+}
+
+.result-next {
+
+  display: flex;
+
+  justify-content: space-between;
+
+  gap: 25px;
+
+  align-items: center;
+
+  padding: 24px;
+
+  background: #ffffff;
+
+  border: 1px solid #d7dfe7;
+
+}
+
+.result-next strong {
+
+  color: #102c43;
+
+}
+
+.result-next p {
+
+  margin: 6px 0 0;
+
+  color: #65717d;
+
+}
+
+
+/* ==========================================================
+   ENGINEERING CTA
+========================================================== */
+
+.pi-cta {
+
+  padding: 70px 0;
+
+  background: #0b2337;
+
+  color: #ffffff;
+
+}
+
+.pi-cta .container {
+
+  display: flex;
+
+  justify-content: space-between;
+
+  gap: 40px;
+
+  align-items: center;
+
+}
+
+.pi-cta h2 {
+
+  max-width: 800px;
+
+  margin: 16px 0 0;
+
+  color: #ffffff;
+
+  font-size: clamp(2rem, 4vw, 3.3rem);
+
+  line-height: 1.08;
+
+}
+
+.pi-cta a {
+
+  padding: 17px 24px;
+
+  background: #ffffff;
+
+  color: #0b2337;
+
+  border-radius: 999px;
+
+}
+
+
+/* ==========================================================
+   RESPONSIVE
+========================================================== */
+
+@media (max-width: 1050px) {
+
+  .pi-hero-grid {
+
+    grid-template-columns: 1fr;
+
+    gap: 50px;
+
+  }
+
+  .hero-report {
+
+    max-width: 760px;
+
+  }
+
+  .result-grid {
+
+    grid-template-columns: 1fr 1fr;
+
+  }
+
+  .property-detail-grid {
+
+    grid-template-columns: 1fr 1fr;
+
+  }
+
+  .pi-cta .container {
+
+    flex-direction: column;
+
+    align-items: flex-start;
+
+  }
+
+}
+
+@media (max-width: 760px) {
+
+  .goal-grid {
+
+    grid-template-columns: 1fr 1fr;
+
+  }
+
+}
+
+@media (max-width: 650px) {
+
+  .pi-hero {
+
+    padding: 70px 0;
+
+  }
+
+  .pi-hero h1 {
+
+    font-size: 2.7rem;
+
+  }
+
+  .search-row {
+
+    grid-template-columns: 1fr;
+
+  }
+
+  .goal-grid {
+
+    grid-template-columns: 1fr;
+
+  }
+
+  .hero-report {
+
+    grid-template-columns: 1fr;
+
+  }
+
+  .hero-report-rail {
+
+    min-height: 220px;
+
+  }
+
+  .hero-report-rail span {
+
+    margin-top: 65px;
+
+  }
+
+  .result-shell {
+
+    padding: 24px;
+
+  }
+
+  .result-header,
+  .result-next,
+  .download-panel {
+
+    flex-direction: column;
+
+    align-items: flex-start;
+
+  }
+
+  .result-grid {
+
+    grid-template-columns: 1fr;
+
+  }
+
+  .property-detail-grid {
+
+    grid-template-columns: 1fr;
+
+  }
+
+  .property-detail-panel,
+  .project-requirements-panel {
+
+    padding: 20px;
+
+  }
+
+}
+
+<style>
+/* ==========================================================
+   MIDRA APPROVAL PATHWAY
+========================================================== */
+
+.approval-pathway-panel {
+  margin-top: 18px;
+  padding: 28px;
+  background: #ffffff;
+  border: 1px solid #d7dfe7;
+}
+
+.approval-pathway-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.approval-pathway-item {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 16px;
+  background: #f5f7fa;
+  border: 1px solid #dbe2e8;
+}
+
+.approval-pathway-item span,
+.approval-pathway-verification > span,
+.approval-pathway-source > span {
+  display: block;
+  color: #74818d;
+  font-size: .64rem;
+  font-weight: 800;
+  letter-spacing: .09em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.approval-pathway-item strong {
+  color: #102c43;
+  font-size: .94rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.approval-pathway-details {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.approval-pathway-verification,
+.approval-pathway-source {
+  padding: 16px;
+  background: #f5f7fa;
+  border: 1px solid #dbe2e8;
+}
+
+.approval-pathway-verification p {
+  margin: 8px 0 0;
+  color: #65717d;
+  line-height: 1.6;
+}
+
+.approval-pathway-source {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.approval-pathway-source strong {
+  color: #102c43;
+  line-height: 1.5;
+}
+
+.approval-pathway-source a {
+  color: #0e5c8d;
+  font-size: .78rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.approval-pathway-source a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 900px) {
+  .approval-pathway-summary {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .approval-pathway-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .approval-pathway-panel {
+    padding: 20px;
+  }
+}
+</style>
+</style>
